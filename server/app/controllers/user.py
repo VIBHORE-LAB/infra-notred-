@@ -1,11 +1,11 @@
 from flask import request, jsonify
-from app import mongo
+from app.extensions import mongo
 from app.models.user import create_user_schema
 from app.utils.jwt_util import generate_jwt_token
 from app.utils.response_util import generate_response
 from app.utils.role_enums import UserRole
 import bcrypt # type: ignore
-
+from bson import ObjectId
 # **only for owner**
 def register_owner():
     data = request.json
@@ -43,7 +43,8 @@ def register_owner():
     result = mongo.db.users.insert_one(owner_data)
     
     
-    token = generate_jwt_token(result.inserted_id, email)
+    token = generate_jwt_token(result.inserted_id, email, owner_data["role"])
+
     
     response = generate_response(signature, "register_owner", "success", {
         "token": token,
@@ -58,4 +59,102 @@ def register_owner():
     })
     
     return jsonify(response), 201
+
+
+#**login**
+def login_user():
+    data = request.json
+    signature = data.get("req", {}).get("signature", "unknown_signature")
+    payload = data.get("payload", {})
+
+    email = payload.get("email")
+    passwordRaw = payload.get("password")
+
+    if not email or not passwordRaw:
+        return jsonify(generate_response(
+            signature,
+            "login_user",
+            "fail",
+            error="Email and Password are required"
+        )), 400
+
+    user = mongo.db.users.find_one({"email": email})
+    if not user:
+        return jsonify(generate_response(
+            signature,
+            "login_user",
+            "fail",
+            error="User not found with this email"
+        )), 404
+
+    if not bcrypt.checkpw(passwordRaw.encode("utf-8"), user["password"]):
+        return jsonify(generate_response(
+            signature,
+            "login_user",
+            "fail",
+            error="Invalid password"
+        )), 401
+
+    token = generate_jwt_token(str(user["_id"]), user["email"], user["role"])
+
+
+    return jsonify(generate_response(
+        signature,
+        "login_user",
+        "success",
+        {
+            "token": token,
+            "user": {
+                "id": str(user["_id"]),
+                "firstName": user["firstName"],
+                "lastName": user["lastName"],
+                "email": user["email"],
+                "role": user["role"],
+                "companyId": str(user["companyId"]) if user.get("companyId") else None
+            }
+        }
+    )), 200
+
+
+
+def get_users_by_company():
+    signature = request.headers.get("x-signature", "get_users_by_company_v1")
+    company_code = request.headers.get("x-company-code")
+
+    if not company_code:
+        return jsonify(generate_response(signature, "get_users_by_company", "fail", error="Missing company code")), 400
+
+    company = mongo.db.companies.find_one({"code": company_code})
+    if not company:
+        return jsonify(generate_response(signature, "get_users_by_company", "fail", error="Company not found")), 404
+
+    company_id = company["_id"]
+
+    users = list(mongo.db.users.find({"companyId": company_id}, {
+    "_id": 1,
+    "firstName": 1,
+    "lastName": 1,
+    "email": 1,
+    "role": 1
+}))
+
+    grouped = {
+        "Owner": [],
+        "Admin": [],
+        "User": []
+    }
+    print("users", users)
+    for user in users:
+        role = user["role"]
+        if role in grouped:
+            grouped[role].append({
+                "id": str(user["_id"]),
+                "name": f"{user.get('firstName', '')} {user.get('lastName', '')}",
+                "email": user["email"]
+            })
+
+    return jsonify(generate_response(signature, "get_users_by_company", "success", {
+        "companyCode": company_code,
+        "users": grouped
+    })), 200
 

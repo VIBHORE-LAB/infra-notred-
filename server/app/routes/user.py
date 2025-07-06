@@ -1,6 +1,18 @@
 from flask import Blueprint
 from app.controllers import user
+from app.middlewares.auth_middleware import Authenticator
 
 user_bp = Blueprint('user', __name__)
 
-user_bp.route("/register/owner", methods=["POST"])(user.register_owner)
+@user_bp.route("/register/owner", methods=["POST"])
+def register_owner_route():
+    return user.register_owner()
+
+@user_bp.route("/login", methods=["POST"])
+def login_user_route():
+    return user.login_user()
+
+@user_bp.route("/company-users", methods=["GET"])
+@Authenticator()
+def get_users_by_company_route():
+    return user.get_users_by_company()

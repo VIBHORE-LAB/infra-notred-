@@ -9,5 +9,6 @@ def create_user_schema(data, hashed_password, company_id=None, role=UserRole.USE
         "password": hashed_password,
         "role": role.value,
         "companyId": company_id,
+        "projectRoles": [], 
         "createdAt": datetime.utcnow()
     }

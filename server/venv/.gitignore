@@ -1,0 +1,17 @@
+# Ignore Python venvs
+venv/
+black-py.useIntegratedTerminal__pycache__/
+
+# Ignore dotenv files
+.env
+
+# Ignore Python bytecode
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore editor/IDE settings
+.vscode/
+.idea/
+
+# Allow everything else (don’t include `*`)
