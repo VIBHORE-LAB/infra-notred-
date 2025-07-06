@@ -1,22 +1,19 @@
 from datetime import datetime
 
-def generate_response(signautre,action,status,data=None,error=None):
+def generate_response(signature, action, status, data=None, error=None):
     response = {
-        "signature": signautre,
+        "signature": signature,
         "action": action,
         "status": status,
-        "metadata":{
-                "timestamp":datetime.utcnow().isoformat() + "Z",
-                "version":"1.0",
-                "env":"dev"
+        "metadata": {
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "version": "1.0",
+            "env": "dev"
         },
-
-        "data":data if data else {}
+        "data": data if data else {}
     }
 
     if error:
-        if error:
-         response["error"] = error
-        return response
-    
-    
+        response["error"] = error
+
+    return response 
