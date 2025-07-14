@@ -18,7 +18,7 @@ def create_project():
             error = "unauthorized: only owner can create a project"
         )), 403
         
-    company_code = request.headers.get("x-company-code") or payload.get("companyId")
+    company_code = request.headers.get("x-company-code")
     created_by = request.user_id
     
     if not company_code: 
@@ -59,7 +59,7 @@ def create_project():
         )), 400
     
     try:
-        project_data = create_project_schema(payload, created_by, company_id)
+        project_data = create_project_schema(payload, created_by, company_code)
     except ValueError as e:
         return jsonify(generate_response(
             signature,
@@ -88,5 +88,68 @@ def create_project():
     
     
     
-# def get_project_by_id(project_id):
+
+
+
+
+def get_project_by_id(project_id):
+   
+    signature = request.headers.get("x-signature", "get_project_by_id_v1")
+    company_id = request.headers.get("x-company-code")
+    if not company_id:
+        return jsonify(generate_response(
+            signature,
+            "get_project_by_id",
+            "fail",
+            error="Missing company ID in headers"
+        )), 400
+
+    if not ObjectId.is_valid(project_id):
+        return jsonify(generate_response(
+            signature,
+            "get_project_by_id",
+            "fail",
+            error="Invalid project ID format"
+        )), 400
+
+ 
+    project = mongo.db.projects.find_one({"_id": ObjectId(project_id)})
+    print(project,"project")
+    if not project:
+        return jsonify(generate_response(
+            signature,
+            "get_project_by_id",
+            "fail",
+            error="Project not found"
+        )), 404
+
     
+    if str(project["companyId"]) != str(company_id):
+     return jsonify(generate_response(
+        signature,
+        "get_project_by_id",
+        "fail",
+        error="Access denied: this project does not belong to your company"
+    )), 403
+
+
+    return jsonify(generate_response(
+        signature,
+        "get_project_by_id",
+        "success",
+        {
+            "project": {
+                "id": str(project["_id"]),
+                "name": project["name"],
+                "description": project["description"],
+                "companyId": str(project["companyId"]),
+                "createdBy": project["createdBy"],
+                "status": project["status"],
+                "location": project["location"],
+                "funding": project["funding"],
+                "timeline": project["timeline"],
+                "users": project["users"],
+                "teamsize": project["teamsize"],
+            }
+        }
+    )), 200
