@@ -16,3 +16,9 @@ def login_user_route():
 @Authenticator()    
 def get_users_by_company_route():
     return user.get_users_by_company()
+
+
+@user_bp.route("/<user_id>", methods=["GET"])
+@Authenticator()
+def get_user_by_id_route(user_id):
+    return user.get_user_by_id(user_id)

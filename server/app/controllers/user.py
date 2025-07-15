@@ -116,9 +116,10 @@ def login_user():
     )), 200
 
 
-
+#get users by company
 def get_users_by_company():
-    signature = request.headers.get("x-signature", "get_users_by_company_v1")
+    data = request.json
+    signature = data.get("req", {}).get("signature", "unknown_signature")
     company_code = request.headers.get("x-company-code")
 
     if not company_code:
@@ -158,3 +159,33 @@ def get_users_by_company():
         "users": grouped
     })), 200
 
+
+# get user by id
+
+def get_user_by_id(user_id):
+    signature =  "get user"
+    if not ObjectId.is_valid(user_id):
+        return jsonify(generate_response(signature,"get_user_by_id", "fail", error="Invalid user ID format")), 400
+    
+    
+    role = request.user_role
+    userId = request.user_id
+
+    if not role or role.lower() != "owner" and role.lower() != "admin" and user_id != userId:
+        return jsonify(generate_response(signature, "get_user_by_id", "fail", error="Unauthorized access")), 403
+
+    user = mongo.db.users.find_one({"_id": ObjectId(user_id)})
+    
+    if not user:
+        return jsonify(generate_response(signature, "get_user_by_id", "fail", error="No user found")), 404
+
+    return jsonify(generate_response(signature, "get_user_by_id", "success", {
+        "user": {
+            "id": str(user["_id"]),
+            "firstName": user["firstName"],
+            "lastName": user["lastName"],
+            "email": user["email"],
+            "role": user["role"],
+            "companyId": str(user["companyId"]) if user.get("companyId") else None
+        }
+    })), 200
