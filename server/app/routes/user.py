@@ -8,6 +8,14 @@ user_bp = Blueprint('user', __name__)
 def register_owner_route():
     return user.register_owner()
 
+
+@user_bp.route("/register/user",methods=["POST"])
+def register_user_route():
+    return user.register_user()
+
+
+
+
 @user_bp.route("/login", methods=["POST"])
 def login_user_route():
     return user.login_user()

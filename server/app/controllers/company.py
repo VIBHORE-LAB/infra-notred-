@@ -78,7 +78,7 @@ def create_company():
     
     mongo.db.users.update_one(
         {"_id": owner_id},
-        {"$set": {"companyId": result.inserted_id}}
+        {"$set": {"companyCode": company_code}}
     )
     
     return jsonify(generate_response(signature, "create_company", "success", {
@@ -94,7 +94,7 @@ def create_company():
     
 
 
-
+# here i am using company id instead of code and i have no clue why
 def get_company_by_id(company_id):
     signature = request.args.get("signature", "unknown_signature")
     

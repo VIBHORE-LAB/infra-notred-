@@ -4,7 +4,7 @@ from app.extensions import mongo
 from app.utils.response_util import generate_response
 from app.models.project import create_project_schema
 from app.middlewares.auth_middleware import Authenticator
-
+from app.utils.role_enums import UserRole
 def create_project():
     data = request.json
     signature = data.get("req", {}).get("signature", "unknown_signature")
@@ -91,7 +91,7 @@ def create_project():
 
 
 
-
+# def get project by id
 def get_project_by_id(project_id):
    
     signature = request.headers.get("x-signature", "get_project_by_id_v1")
@@ -153,3 +153,76 @@ def get_project_by_id(project_id):
             }
         }
     )), 200
+
+
+
+
+# add admins to a project
+
+def add_admin_to_project():
+    
+    data = request.json
+    signature = data.get("req",{}).get("signature", "add_admin_to_project")
+    payload = data.get("payload",{})
+    
+    user_id = payload.get("userId")
+    project_id = payload.get("projectId")
+    companyCode = request.headers.get("x-company-code")
+    if not user_id or not project_id or not companyCode:
+        return jsonify(generate_response(signature, "fail", error="userId and projectId and companyCode are required")), 400
+    
+    if not ObjectId.is_valid(user_id) or not ObjectId.is_valid(project_id):
+        return jsonify(generate_response(signature,"add_admin_to_project", "fail", errpr="Invalid Data format")),400
+    
+    role = request.user_role
+    if role.lower() != "owner":
+        return jsonify(generate_response(signature,"add_admin_to_project","fail",error="Only owners are allowed to add admins")),404
+    
+    project = mongo.db.projects.find_one({"_id":ObjectId(project_id), "companyCode":companyCode})
+    if not project:
+        return jsonify(generate_response(signature,"add_admin_to_project","fail",error="Project not found for the respective company")),404
+    
+    user = mongo.db.users.find_one({"_id":ObjectId(user_id),"companyCode":companyCode})
+    if not user:
+        return jsonify(generate_response(signature,"fail",error="No user found for this company")),404
+    
+    existing_roles = user.get("projectRoles", [])
+    
+    already_admin = any(str(role.get("projectId"))==project_id and role.get("role") == "Admin" for role in existing_roles )    
+    
+    if already_admin:
+        return jsonify(generate_response(signature,"add_admin_to_project","fail",error="User is already assigned as the admin for this project")),400
+    
+    mongo.db.users.update_one(
+        {"_id":ObjectId(user_id)},
+        {
+            "$set":{role:UserRole.ADMIN.value},
+            "$push":{
+                "projectRoles":{
+                    "projectId":ObjectId(project_id),
+                    "role":"Admin"
+                }
+            }
+            
+            }
+    )
+    
+    updated_user = mongo.db.users.find_one({"_id": ObjectId(user_id)})
+    
+    response_data = {
+        "id": str(updated_user["_id"]),
+        "name": f"{updated_user.get('firstName', '')} {updated_user.get('lastName', '')}".strip(),
+        "email": updated_user["email"],
+        "role": updated_user["role"],
+        "companyCode":updated_user["companyCode"],
+        "projectRoles": [
+            {
+                "projectId": str(p["projectId"]),
+                "role": p["role"]
+            } for p in updated_user.get("projectRoles", [])
+        ]
+    }
+
+    return jsonify(generate_response(signature, "add_admin_to_project", "success", {
+        "admin": response_data
+    })), 200

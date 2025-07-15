@@ -9,7 +9,7 @@ def generate_jwt_token(user_id, email, role):
         "user_id": str(user_id),
         "email": email,
         "role": role,  
-        "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=2)
+        "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=24)
     }
     return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
 

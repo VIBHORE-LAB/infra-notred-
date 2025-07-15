@@ -8,7 +8,7 @@ def create_project_schema(data,created_by, company_code):
     return {
         "name": data.get("name"),
         "description": data.get("description"),
-        "companyId": company_code,
+        "companyCode": company_code,
         "createdBy": created_by,
         "funding": {
             "estimatedBudget": data.get("estimatedBudget"),

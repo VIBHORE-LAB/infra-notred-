@@ -37,8 +37,8 @@ def register_owner():
     owner_data = create_user_schema(
         payload,
         hashed_password,
-        company_id = None,
-        role = UserRole.OWNER
+        companyCode = None,
+        role = UserRole.OWNER.value
     )
     result = mongo.db.users.insert_one(owner_data)
     
@@ -54,11 +54,75 @@ def register_owner():
             "lastName": owner_data["lastName"],
             "email": owner_data["email"],
             "role": owner_data["role"],
-            "companyId": None
+            "companyCode": None
         }
     })
     
     return jsonify(response), 201
+
+
+#register user(can be used for both admins and normal users)
+
+
+def register_user():
+    data = request.json
+    signature = data.get("req", {}).get("signature", "unknown_signature")
+    payload = data.get("payload", {})
+
+    email = payload.get("email")
+    password = payload.get("password")
+    firstName = payload.get("firstName")
+    lastName = payload.get("lastName")
+    companyCode = payload.get("companyCode")
+
+    if not email or not password or not firstName or not lastName or not companyCode:
+        return jsonify(generate_response(signature, "register_user", "fail", error="All fields are required")), 400
+
+    company = mongo.db.companies.find_one({"code": companyCode})
+    if not company:
+        return jsonify(generate_response(signature, "register_user", "fail", error="Invalid Company Code")), 400
+
+    user = mongo.db.users.find_one({"email": email})
+    if user:
+        return jsonify(generate_response(signature, "register_user", "fail", error="User already exists")), 400
+
+    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
+    user_data = create_user_schema(
+        payload,
+        hashed_password,
+        companyCode=companyCode,
+        role=UserRole.USER.value
+    )
+
+    result = mongo.db.users.insert_one(user_data)
+    token = generate_jwt_token(result.inserted_id, email, user_data["role"])
+
+    response = generate_response(signature, "register_user", "success", {
+        "token": token,
+        "user": {
+            "id": str(result.inserted_id),
+            "firstName": user_data["firstName"],
+            "lastName": user_data["lastName"],
+            "email": user_data["email"],
+            "role": user_data["role"],
+            "companyCode": user_data["companyCode"]
+        }
+    })
+
+    return jsonify(response), 201
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 #**login**
@@ -116,6 +180,12 @@ def login_user():
     )), 200
 
 
+
+
+
+
+
+
 #get users by company
 def get_users_by_company():
     data = request.json
@@ -129,9 +199,8 @@ def get_users_by_company():
     if not company:
         return jsonify(generate_response(signature, "get_users_by_company", "fail", error="Company not found")), 404
 
-    company_id = company["_id"]
 
-    users = list(mongo.db.users.find({"companyId": company_id}, {
+    users = list(mongo.db.users.find({"companyCode": company_code}, {
     "_id": 1,
     "firstName": 1,
     "lastName": 1,
