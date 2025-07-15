@@ -13,6 +13,6 @@ def login_user_route():
     return user.login_user()
 
 @user_bp.route("/company-users", methods=["GET"])
-@Authenticator()
+@Authenticator()    
 def get_users_by_company_route():
     return user.get_users_by_company()

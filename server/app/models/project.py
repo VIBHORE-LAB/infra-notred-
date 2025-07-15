@@ -1,15 +1,14 @@
 from datetime import datetime
 from bson import ObjectId
 
-def create_project_schema(data,created_by, company_id):
-    if not ObjectId.is_valid(company_id):
-        raise ValueError("Invalid company ID")
+def create_project_schema(data,created_by, company_code):
+
     
     
     return {
         "name": data.get("name"),
         "description": data.get("description"),
-        "companyId": company_id,
+        "companyId": company_code,
         "createdBy": created_by,
         "funding": {
             "estimatedBudget": data.get("estimatedBudget"),
