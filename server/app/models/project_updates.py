@@ -8,7 +8,7 @@ def create_project_update_schema(data, project_id, updated_by):
     
     return {
         "projectId": ObjectId(project_id),
-        "updatedBy": data.get("updateType"),
+        "updateType": data.get("updateType"),
         "title": data.get("title"),
         "description": data.get("description"),
         "updatedBy": updated_by,

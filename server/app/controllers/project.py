@@ -39,7 +39,7 @@ def create_project():
             
         )), 404
     
-    company_id = company["_id"]
+    companyCode = company["_id"]
     created_by = request.user_id
     
     required_fields = [
@@ -79,7 +79,7 @@ def create_project():
                 "id": str(result.inserted_id),
                 "name": project_data["name"],
                 "description": project_data["description"],
-                "companyId": str(company_id),
+                "companyCode": str(companyCode),
                 "createdBy": created_by,
                 "status": project_data["status"]
             }
@@ -95,14 +95,6 @@ def create_project():
 def get_project_by_id(project_id):
    
     signature = request.headers.get("x-signature", "get_project_by_id_v1")
-    company_id = request.headers.get("x-company-code")
-    if not company_id:
-        return jsonify(generate_response(
-            signature,
-            "get_project_by_id",
-            "fail",
-            error="Missing company ID in headers"
-        )), 400
 
     if not ObjectId.is_valid(project_id):
         return jsonify(generate_response(
@@ -124,13 +116,6 @@ def get_project_by_id(project_id):
         )), 404
 
     
-    if str(project["companyId"]) != str(company_id):
-     return jsonify(generate_response(
-        signature,
-        "get_project_by_id",
-        "fail",
-        error="Access denied: this project does not belong to your company"
-    )), 403
 
 
     return jsonify(generate_response(
@@ -142,7 +127,7 @@ def get_project_by_id(project_id):
                 "id": str(project["_id"]),
                 "name": project["name"],
                 "description": project["description"],
-                "companyId": str(project["companyId"]),
+                "companyCode": str(project["companyCode"]),
                 "createdBy": project["createdBy"],
                 "status": project["status"],
                 "location": project["location"],
