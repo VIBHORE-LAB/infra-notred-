@@ -7,6 +7,7 @@ from app.routes.user import user_bp
 from app.routes.company import company_bp
 from app.routes.projects import project_bp
 from app.routes.project_updates import project_updates_bp
+from app.routes.funds import funds_bp
 from app.extensions import mongo  
 
 def create_app():
@@ -22,4 +23,5 @@ def create_app():
     app.register_blueprint(company_bp, url_prefix='/infrared/api/v1/company')
     app.register_blueprint(project_bp, url_prefix='/infrared/api/v1/projects')
     app.register_blueprint(project_updates_bp,url_prefix='/infrared/api/v1/project-updates')
+    app.register_blueprint(funds_bp,url_prefix='/infrared/api/v1/funds')
     return app
