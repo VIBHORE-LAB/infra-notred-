@@ -12,7 +12,11 @@ def create_project_schema(data,created_by, company_code):
         "createdBy": created_by,
         "funding": {
             "estimatedBudget": data.get("estimatedBudget"),
-            "fundingSource": data.get("fundingSource")
+            "fundingSource": data.get("fundingSource"),
+            "totalAllocated": 0,
+            "totalSpent": 0,
+            "utilizationPercent": 0
+
         },
         "timeline": {
             "startDate": data.get("startDate"),
