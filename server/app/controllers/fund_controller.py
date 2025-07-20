@@ -84,7 +84,7 @@ def get_transaction_by_id(transaction_id):
             signature,
             "get_transaction_by_id",
             "success",
-            data=transaction 
+            data=transaction
         )), 200
 
     except Exception as e:
@@ -100,41 +100,91 @@ def get_transaction_by_id(transaction_id):
 
 def get_fund_summary_by_project(project_id):
     signature = request.args.get("signature", "get_fund_summary_by_project")
-    
+
     if not ObjectId.is_valid(project_id):
-        return jsonify(generate_response(signature,"get_fund_summary_by_project", "fail", error = "Invalid Project ID format")), 400
-    
+        return jsonify(generate_response(
+            signature, "get_fund_summary_by_project", "fail",
+            error="Invalid Project ID format"
+        )), 400
+
     project = mongo.db.projects.find_one({"_id": ObjectId(project_id)})
     if not project:
-        return jsonify(generate_response(signature,"get_fund_summary_by_project", "fail", error = "Project not found")), 404
-    
+        return jsonify(generate_response(
+            signature, "get_fund_summary_by_project", "fail",
+            error="Project not found"
+        )), 404
+
     try:
         pipeline = [
-            {"$match":{"projectId":ObjectId(project_id)}},
-            {"$group":{
+            {"$match": {"projectId": ObjectId(project_id)}},
+            {"$group": {
                 "_id": "$type",
                 "total": {"$sum": "$amount"}
             }}
         ]
-        
+
         result = list(mongo.db.fund_transaction.aggregate(pipeline))
-        summary = {"Credit":0, "Expenditure":0}
+
+        summary = {"Credit": 0.0, "Expenditure": 0.0}
+
         for row in result:
             summary[row["_id"]] = row["total"]
-        summary["utilization_percent"] = round((summary["Expenditure"] / summary["Credit"]) * 100, 2) if summary["Credit"] > 0 else 0
-        return jsonify(generate_response(signature, "get_fund_summary_by_project", "success", data=summary)), 200
+
+        credit = summary["Credit"]
+        expenditure = summary["Expenditure"]
+        summary["utilization_percent"] = round((expenditure / credit) * 100, 2) if credit > 0 else 0.0
+
+        return jsonify(generate_response(
+            signature, "get_fund_summary_by_project", "success",
+            data=summary
+        )), 200
+
     except Exception as e:
-        return jsonify(generate_response(signature, "get_fund_summary_by_project", "fail", error=str(e))), 500
-        
+        return jsonify(generate_response(
+            signature, "get_fund_summary_by_project", "fail",
+            error=str(e)
+        )), 500
+
 def get_fund_transaction_by_project(project_id):
-    signature = request.args.get("signature","get_fund_transaction_by_project")
+    signature = request.args.get("signature", "get_fund_transaction_by_project")
+
     if not ObjectId.is_valid(project_id):
-        return jsonify(generate_response(signature,"get_fund_transaction_by_project", "fail", error ="Invalid Project ID format")), 400
-    
+        return jsonify(generate_response(
+            signature, "get_fund_transaction_by_project", "fail",
+            error="Invalid Project ID format"
+        )), 400
+
     project = mongo.db.projects.find_one({"_id": ObjectId(project_id)})
     if not project:
-        return jsonify(generate_response(signature,"get_fund_transaction_by_project", "fail", error = "Project not found")), 404
-    
-    
-    
-    
+        return jsonify(generate_response(
+            signature, "get_fund_transaction_by_project", "fail",
+            error="Project not found"
+        )), 404
+
+    try:
+        transactions_cursor = mongo.db.fund_transaction.find(
+            {"projectId": ObjectId(project_id)}
+        ).sort("date", -1)
+
+        transactions = []
+        for txn in transactions_cursor:
+            transactions.append({
+                "id": str(txn["_id"]),
+                "projectId": str(txn["projectId"]),
+                "type": txn["type"],
+                "amount": txn["amount"],
+                "purpose": txn.get("purpose", ""),
+                "createdBy": str(txn["createdBy"]),
+                "date": txn["date"].isoformat() if "date" in txn else None
+            })
+
+        return jsonify(generate_response(
+            signature, "get_fund_transaction_by_project", "success",
+            data={"transactions": transactions}
+        )), 200
+
+    except Exception as e:
+        return jsonify(generate_response(
+            signature, "get_fund_transaction_by_project", "fail",
+            error=str(e)
+        )), 500

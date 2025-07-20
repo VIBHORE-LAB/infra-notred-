@@ -26,3 +26,5 @@ server/app/controllers/__pycache__/
 server/app/__pycache__/
 server/app/middlewares/__pycache__/
 server/app/models/__pycache__/
+server/venv/bin/pip3
+venv/
