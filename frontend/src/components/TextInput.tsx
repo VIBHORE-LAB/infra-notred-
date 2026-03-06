@@ -43,6 +43,13 @@ const TextInput: React.FC<TextInputProps> = ({
       fullWidth={fullWidth}
       error={error}
       helperText={helperText}
+      size="small"
+      sx={{
+        '& .MuiOutlinedInput-root': {
+          borderRadius: '0.75rem',
+          backgroundColor: '#fbfdff',
+        },
+      }}
       {...rest}
     />
   );

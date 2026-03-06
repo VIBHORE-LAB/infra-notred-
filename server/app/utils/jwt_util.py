@@ -4,11 +4,12 @@ import os
 
 JWT_SECRET = os.getenv("JWT_SECRET")
 
-def generate_jwt_token(user_id, email, role): 
+def generate_jwt_token(user_id, email, role, company_code=None): 
     payload = {
         "user_id": str(user_id),
         "email": email,
-        "role": role,  
+        "role": role,
+        "companyCode": company_code,
         "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=24)
     }
     return jwt.encode(payload, JWT_SECRET, algorithm="HS256")

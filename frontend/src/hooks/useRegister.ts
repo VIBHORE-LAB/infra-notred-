@@ -1,5 +1,5 @@
 import { useState } from "react";
-import instance from "../axios/axios";
+import instance from "../api/api";
 import type { RegisterFormData, RegisterResponse } from "../types/auth";
 
 export const useRegister = () =>{

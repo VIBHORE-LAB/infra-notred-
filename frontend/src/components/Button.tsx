@@ -34,11 +34,18 @@ const Button: React.FC<ButtonProps> = (props: ButtonProps) => {
     <MUIButton
       variant={isOutlined ? 'outlined' : 'contained'}
       color={variantToColorMap[variantType]}
+      sx={{
+        borderRadius: '0.75rem',
+        textTransform: 'none',
+        fontWeight: 700,
+        minHeight: '44px',
+        boxShadow: isOutlined ? 'none' : '0 10px 20px rgba(15, 95, 168, 0.2)',
+      }}
       {...rest}
     >
       {children}
-      </MUIButton>
-    );
-  };
-  
-  export default Button;
+    </MUIButton>
+  );
+};
+
+export default Button;

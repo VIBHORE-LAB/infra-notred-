@@ -5,6 +5,39 @@ from app.utils.response_util import generate_response
 from app.models.project import create_project_schema
 from app.middlewares.auth_middleware import Authenticator
 from app.utils.role_enums import UserRole
+
+def get_all_projects():
+    signature = "get_all_projects"
+    company_code = request.headers.get("x-company-code")
+
+    # Find by company code string OR by company ObjectId
+    query = {}
+    if company_code:
+        query = {"$or": [
+            {"companyCode": company_code},
+            {"companyCode": ObjectId(company_code) if ObjectId.is_valid(company_code) else None}
+        ]}
+
+    try:
+        cursor = mongo.db.projects.find(query).sort("createdAt", -1)
+        projects = []
+        for p in cursor:
+            projects.append({
+                "id": str(p["_id"]),
+                "name": p.get("name", ""),
+                "description": p.get("description", ""),
+                "status": p.get("status", ""),
+                "location": p.get("location", {}),
+                "funding": p.get("funding", {}),
+                "timeline": p.get("timeline", {}),
+                "teamsize": p.get("teamsize", 0),
+                "projectType": p.get("projectType", ""),
+            })
+        return jsonify(generate_response(signature, "get_all_projects", "success", {"projects": projects})), 200
+    except Exception as e:
+        return jsonify(generate_response(signature, "get_all_projects", "fail", error=str(e))), 500
+
+
 def create_project():
     data = request.json
     signature = data.get("req", {}).get("signature", "unknown_signature")

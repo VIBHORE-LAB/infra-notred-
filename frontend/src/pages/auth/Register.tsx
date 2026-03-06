@@ -1,9 +1,11 @@
-import * as React from 'react';
-import { Box, Typography } from "@mui/material";
+import React, { useState } from 'react';
+import { Typography } from '@mui/material';
 import TextInput from '../../components/TextInput';
 import Button from '../../components/Button';
 import { useRegister } from '../../hooks/useRegister';
-import { useState } from "react";
+import { useNavigate } from 'react-router-dom';
+import AuthLayout from '../../components/layout/AuthLayout';
+
 interface RegisterFormData {
   firstName: string;
   lastName: string;
@@ -14,14 +16,15 @@ interface RegisterFormData {
 
 const Register: React.FC = () => {
   const [formData, setFormData] = useState<RegisterFormData>({
-    firstName: "",
-    lastName: "",
-    email: "",
-    password: "",
-    confirmPassword: "" 
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
   });
 
   const { loading, error, register } = useRegister();
+  const navigate = useNavigate();
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -29,7 +32,7 @@ const Register: React.FC = () => {
 
   const handleSubmit = async () => {
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match");
+      alert('Passwords do not match');
       return;
     }
 
@@ -42,66 +45,74 @@ const Register: React.FC = () => {
 
     const response = await register(payload);
     if (response) {
-      alert("Registration successful!");
-      // Optionally reset form
-      setFormData({
-        firstName: "",
-        lastName: "",
-        email: "",
-        password: "",
-        confirmPassword: ""
-      });
+      alert('Registration successful! Please sign in.');
+      navigate('/login');
     }
   };
 
   return (
-    <Box display="flex" flexDirection="column" gap={2} maxWidth={400} mx="auto">
-      <Typography variant="h4">Register</Typography>
+    <AuthLayout
+      title="Create account"
+      subtitle="Set up your team access and start managing project delivery securely."
+      footer={(
+        <>
+          Already have an account?{' '}
+          <button className="font-semibold text-[#0f5fa8] hover:underline" onClick={() => navigate('/login')}>
+            Sign in
+          </button>
+        </>
+      )}
+    >
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <TextInput
+          label="First Name"
+          name="firstName"
+          value={formData.firstName}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(e.target.name, e.target.value)}
+        />
+        <TextInput
+          label="Last Name"
+          name="lastName"
+          value={formData.lastName}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(e.target.name, e.target.value)}
+        />
+      </div>
 
-      <TextInput
-        label="First Name"
-        name="firstName"
-        value={formData.firstName}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(e.target.name, e.target.value)}
-      />
-      <TextInput
-        label="Last Name"
-        name="lastName"
-        value={formData.lastName}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(e.target.name, e.target.value)}
-      />
-      <TextInput
-        label="Email"
-        name="email"
-        value={formData.email}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(e.target.name, e.target.value)}
-      />
-      <TextInput
-        label="Password"
-        name="password"     
-
-        type="password"
-                  value={formData.password}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(e.target.name, e.target.value)}
-      />
-      <TextInput
-        label="Confirm Password"
-        name="confirmPassword"
-        type="password"
-        value={formData.confirmPassword ?? ""}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(e.target.name, e.target.value)}
-      />
+      <div className="space-y-4 mt-4">
+        <TextInput
+          label="Work Email"
+          name="email"
+          value={formData.email}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(e.target.name, e.target.value)}
+        />
+        <TextInput
+          label="Password"
+          name="password"
+          type="password"
+          value={formData.password}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(e.target.name, e.target.value)}
+        />
+        <TextInput
+          label="Confirm Password"
+          name="confirmPassword"
+          type="password"
+          value={formData.confirmPassword}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(e.target.name, e.target.value)}
+        />
+      </div>
 
       {error && (
-        <Typography color="error" variant="body2">
+        <Typography color="error" variant="body2" className="mt-4 rounded-lg border border-red-200 bg-red-50 p-2 text-center">
           {error}
         </Typography>
       )}
 
-      <Button onClick={handleSubmit} variantType='warning' disabled={loading}>
-        {loading ? 'Registering...' : 'Register'}
-      </Button>
-    </Box>
+      <div className="mt-5">
+        <Button onClick={handleSubmit} variantType="primary" disabled={loading} fullWidth>
+          {loading ? 'Creating account...' : 'Create Account'}
+        </Button>
+      </div>
+    </AuthLayout>
   );
 };
 

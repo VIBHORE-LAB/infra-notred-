@@ -6,16 +6,32 @@ from app.models.project_updates import create_project_update_schema
 from app.middlewares.image_uploader import validate_and_upload_images
 import json
 
-def create_project_update():
-    try:
-        data = json.loads(request.form.get("req", '{}'))
-        payload = json.loads(request.form.get("payload", '{}'))
-        signature = data.get("signature", "unknown_signature")
-    except Exception as e:
-        return jsonify({"error": "Invalid JSON in form-data fields", "details": str(e)}), 400
 
-    role = request.user_role
-    if role.lower() not in ["owner", "admin"]:
+def create_project_update():
+    signature = "create_project_update"
+
+    try:
+        data = {}
+        if request.content_type and "multipart/form-data" in request.content_type:
+            req_meta = json.loads(request.form.get("req", "{}"))
+            payload = json.loads(request.form.get("payload", "{}"))
+            files = request.files.getlist("attachments")
+        else:
+            data = request.get_json(silent=True) or {}
+            req_meta = data.get("req", {})
+            payload = data.get("payload", data)
+            files = []
+        signature = req_meta.get("signature") or data.get("signature", "create_project_update")
+    except Exception as e:
+        return jsonify(generate_response(
+            signature,
+            "create_project_update",
+            "fail",
+            error=f"Invalid request payload: {str(e)}"
+        )), 400
+
+    role = (request.user_role or "").lower()
+    if role not in ["owner", "admin"]:
         return jsonify(generate_response(
             signature,
             "create_project_update",
@@ -31,15 +47,6 @@ def create_project_update():
             "fail",
             error="missing company code"
         )), 400
-
-    company = mongo.db.companies.find_one({"code": company_code})
-    if not company:
-        return jsonify(generate_response(
-            signature,
-            "create_project_update",
-            "fail",
-            error="company not found"
-        )), 404
 
     project_id = payload.get("projectId")
     if not project_id or not ObjectId.is_valid(project_id):
@@ -61,9 +68,9 @@ def create_project_update():
 
     title = payload.get("title")
     description = payload.get("description")
-    updateType = payload.get("updateType")
+    update_type = payload.get("updateType")
 
-    if not title or not description or not updateType:
+    if not title or not description or not update_type:
         return jsonify(generate_response(
             signature,
             "create_project_update",
@@ -71,24 +78,22 @@ def create_project_update():
             error="Title, Description, and updateType are required"
         )), 400
 
-    files = request.files.getlist("attachments")
     image_urls, error_response, status_code = validate_and_upload_images(signature, files)
-
     if error_response:
         return error_response, status_code
 
-    payload = {
+    update_payload = {
         "projectId": project_id,
         "title": title,
-        "descrption": description,
-        "updateType": updateType,
-        "attachments": image_urls or []
+        "description": description,
+        "updateType": update_type,
+        "attachments": image_urls or payload.get("attachments", []) or []
     }
 
     updated_by = request.user_id
 
     try:
-        update_doc = create_project_update_schema(payload, project_id, updated_by)
+        update_doc = create_project_update_schema(update_payload, project_id, updated_by)
         result = mongo.db.project_updates.insert_one(update_doc)
 
         return jsonify(generate_response(
@@ -134,6 +139,12 @@ def get_project_update(update_id):
             
         update["_id"] = str(update["_id"])
         update["projectId"] = str(update.get("projectId", ""))
+        if "updatedBy" in update and isinstance(update["updatedBy"], ObjectId):
+            update["updatedBy"] = str(update["updatedBy"])
+        if "createdAt" in update and update["createdAt"]:
+            update["createdAt"] = update["createdAt"].isoformat()
+        if "timestamp" in update and update["timestamp"]:
+            update["timestamp"] = update["timestamp"].isoformat()
 
         return jsonify(generate_response(
             signature,
@@ -151,5 +162,26 @@ def get_project_update(update_id):
             data=str(e)
         )), 500
 
-    
-    
+
+def get_project_updates_by_project(project_id):
+    signature = "get_project_updates_by_project"
+
+    if not ObjectId.is_valid(project_id):
+        return jsonify(generate_response(signature, "get_project_updates_by_project", "fail", error="Invalid project ID format")), 400
+
+    try:
+        cursor = mongo.db.project_updates.find({"projectId": ObjectId(project_id)}).sort("createdAt", -1)
+        updates = []
+        for u in cursor:
+            updates.append({
+                "id": str(u["_id"]),
+                "projectId": str(u["projectId"]),
+                "title": u.get("title", ""),
+                "description": u.get("description", u.get("descrption", "")),
+                "updateType": u.get("updateType", ""),
+                "attachments": u.get("attachments", []),
+                "createdAt": u["createdAt"].isoformat() if "createdAt" in u else (u["timestamp"].isoformat() if "timestamp" in u else None),
+            })
+        return jsonify(generate_response(signature, "get_project_updates_by_project", "success", data={"updates": updates})), 200
+    except Exception as e:
+        return jsonify(generate_response(signature, "get_project_updates_by_project", "fail", error=str(e))), 500

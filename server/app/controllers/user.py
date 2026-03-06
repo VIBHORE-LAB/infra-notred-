@@ -159,7 +159,7 @@ def login_user():
             error="Invalid password"
         )), 401
 
-    token = generate_jwt_token(str(user["_id"]), user["email"], user["role"])
+    token = generate_jwt_token(str(user["_id"]), user["email"], user["role"], user.get("companyCode"))
 
 
     return jsonify(generate_response(
@@ -174,7 +174,8 @@ def login_user():
                 "lastName": user["lastName"],
                 "email": user["email"],
                 "role": user["role"],
-                "companyId": str(user["companyId"]) if user.get("companyId") else None
+                "companyId": str(user["companyId"]) if user.get("companyId") else None,
+                "companyCode": user.get("companyCode")
             }
         }
     )), 200

@@ -42,10 +42,34 @@ def create_fund_transaction():
     try:
         transaction = create_fund_transaction_schema(payload, project_id, user_id)
         mongo.db.fund_transaction.insert_one(transaction)
-        pipeline =[
-            {"$match":{"projectId": ObjectId(project_id)}},
-            {""}
+
+        # Calculate new totals to update the project
+        pipeline = [
+            {"$match": {"projectId": ObjectId(project_id)}},
+            {"$group": {
+                "_id": "$type",
+                "total": {"$sum": "$amount"}
+            }}
         ]
+        result = list(mongo.db.fund_transaction.aggregate(pipeline))
+        summary = {"Credit": 0.0, "Expenditure": 0.0}
+        for row in result:
+            summary[row["_id"]] = row["total"]
+
+        credit = summary["Credit"]
+        expenditure = summary["Expenditure"]
+        utilization_percent = round((expenditure / credit) * 100, 2) if credit > 0 else 0.0
+
+        # Update Project
+        mongo.db.projects.update_one(
+            {"_id": ObjectId(project_id)},
+            {"$set": {
+                "funding.totalAllocated": credit,
+                "funding.totalSpent": expenditure,
+                "funding.utilizationPercent": utilization_percent
+            }}
+        )
+
         return jsonify(generate_response(signature, "create_fund_transaction", "success", data={"transaction": "recorded"})), 201
 
     except Exception as e:
