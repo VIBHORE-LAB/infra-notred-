@@ -4,6 +4,7 @@ from app.controllers.ai_controller import (
     get_portfolio_analytics,
     simulate_project_impact,
     get_milestone_analytics,
+    get_ai_summary,
 )
 from app.middlewares.auth_middleware import Authenticator
 
@@ -23,6 +24,11 @@ def analytics():
 @Authenticator()
 def simulate():
     return simulate_project_impact()
+
+@ai_bp.route('/summary', methods=['GET'])
+@Authenticator()
+def summary():
+    return get_ai_summary()
 
 # Feature 9: Milestone Progress Analytics
 @ai_bp.route('/milestones/<project_id>', methods=['GET'])

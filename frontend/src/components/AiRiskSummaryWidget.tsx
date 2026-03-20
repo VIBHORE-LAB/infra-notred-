@@ -62,9 +62,20 @@ const AiRiskSummaryWidget: React.FC<AiRiskSummaryWidgetProps> = ({ projects, pre
         <CardHeader>
           <CardTitle>Forecast summary</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <p>No forecast data is available yet.</p>
-          <p>Add projects to unlock schedule outlooks and confidence scores.</p>
+        <CardContent className="flex flex-col items-center justify-center space-y-4 px-6 py-10 text-center">
+          <div className="rounded-2xl bg-primary/10 p-3 text-primary">
+            <Sparkles className="h-6 w-6" />
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-foreground">Awaiting Project Data</h3>
+            <p className="max-w-[240px] text-xs leading-relaxed text-muted-foreground">
+              Add target start dates and deadlines to your projects to unlock AI-driven risk analysis and schedule outlooks.
+            </p>
+          </div>
+          <div className="mt-2 flex items-center gap-2 text-[10px] font-medium uppercase tracking-widest text-primary">
+            <div className="h-1 w-1 animate-pulse rounded-full bg-primary" />
+            <span>Ready for analysis</span>
+          </div>
         </CardContent>
       </Card>
     );

@@ -52,6 +52,20 @@ export const useActivity = () => {
     }
   }, []);
 
+  const seedDemoActivity = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await instance.post('/activity/seed-demo');
+      return response.data?.data;
+    } catch (error: any) {
+      setError(getApiErrorMessage(error, 'Failed to seed demo data'));
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   return {
     projectLogs,
     companyLogs,
@@ -59,5 +73,6 @@ export const useActivity = () => {
     error,
     fetchProjectActivity,
     fetchCompanyActivity,
+    seedDemoActivity,
   };
 };

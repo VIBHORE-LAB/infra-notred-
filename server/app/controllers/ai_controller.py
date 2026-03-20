@@ -5,24 +5,101 @@ from app.utils.ai_utils import predict_project_delay
 from app.utils.response_util import generate_response
 
 def batch_predict_projects():
-    data = request.json
-    signature = data.get("signature", "batch_predict")
-    payload = data.get("payload", {})
-    
-    projects = payload.get("projects", [])
-    
-    if not projects:
-        return jsonify(generate_response(signature, "batch_predict", "fail", error="No projects provided")), 400
+    signature = "batch_predict_projects"
+    try:
+        data = request.json
+        payload = data.get("payload", {})
+        projects = payload.get("projects", [])
         
-    predictions = {}
-    for project in projects:
-        project_id = project.get("id")
-        if project_id:
-            prediction = predict_project_delay(project)
-            if prediction:
-                predictions[project_id] = prediction
-                
-    return jsonify(generate_response(signature, "batch_predict", "success", data={"predictions": predictions})), 200
+        if not projects:
+            return jsonify(generate_response(signature, "batch_predict", "fail", error="No projects provided")), 400
+            
+        predictions = {}
+        for project in projects:
+            project_id = project.get("id")
+            if project_id:
+                try:
+                    prediction = predict_project_delay(project)
+                    if prediction:
+                        predictions[project_id] = prediction
+                except Exception as e:
+                    print(f"[ERROR] Prediction failed for project {project_id}: {str(e)}")
+                    continue
+                    
+        return jsonify(generate_response(signature, "batch_predict", "success", data={"predictions": predictions})), 200
+    except Exception as e:
+        return jsonify(generate_response(signature, "batch_predict", "fail", error=str(e))), 500
+
+
+def get_ai_summary():
+    """GET /infrared/api/v1/ai/summary — Server-side global prediction summary"""
+    signature = "get_ai_summary"
+    company_code = request.headers.get("x-company-code")
+    
+    if not company_code:
+        return jsonify(generate_response(signature, "get_ai_summary", "fail", error="Company code required")), 400
+
+    try:
+        projects = list(mongo.db.projects.find({"companyCode": company_code}))
+        if not projects:
+            return jsonify(generate_response(signature, "get_ai_summary", "success", data={
+                "predictions": {},
+                "stats": {"highRiskCount": 0, "medRiskCount": 0, "totalAnalyzed": 0, "topRisks": []}
+            })), 200
+
+        predictions = {}
+        for p in projects:
+            p_map = {
+                "id": str(p["_id"]),
+                "name": p.get("name", ""),
+                "timeline": p.get("timeline", {}),
+                "funding": p.get("funding", {}),
+                "status": p.get("status", "Planned"),
+                "teamsize": p.get("teamsize", 10),
+                "location": p.get("location", {}),
+                "projectType": p.get("projectType", ""),
+                "createdAt": p.get("createdAt").isoformat() if p.get("createdAt") and hasattr(p.get("createdAt"), 'isoformat') else None
+            }
+            try:
+                pred = predict_project_delay(p_map)
+                if pred:
+                    predictions[p_map["id"]] = pred
+            except Exception as e:
+                print(f"[ERROR] Prediction failed for {p_map['id']}: {str(e)}")
+
+        # Calculate Stats
+        values = list(predictions.values())
+        high_risk_count = len([v for v in values if v["riskLevel"] == "High"])
+        med_risk_count = len([v for v in values if v["riskLevel"] == "Medium"])
+        
+        # Sort for top risks (most delay)
+        top_risks_ids = sorted(
+            predictions.keys(),
+            key=lambda k: (predictions[k]["predictedTotalDays"] - predictions[k]["delayBreakdown"]["baseTimeline"]),
+            reverse=True
+        )[:3]
+        
+        # Format top risks for frontend
+        top_risks = []
+        for rid in top_risks_ids:
+            p = next((p for p in projects if str(p["_id"]) == rid), None)
+            if p:
+                top_risks.append({
+                    "id": rid,
+                    "name": p.get("name", "Unknown Project")
+                })
+
+        return jsonify(generate_response(signature, "get_ai_summary", "success", data={
+            "predictions": predictions,
+            "stats": {
+                "highRiskCount": high_risk_count,
+                "medRiskCount": med_risk_count,
+                "totalAnalyzed": len(predictions),
+                "topRisks": top_risks
+            }
+        })), 200
+    except Exception as e:
+        return jsonify(generate_response(signature, "get_ai_summary", "fail", error=str(e))), 500
 
 def get_portfolio_analytics():
     signature = "get_portfolio_analytics"

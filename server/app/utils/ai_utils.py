@@ -1,5 +1,5 @@
 import math
-from datetime import datetime
+from datetime import datetime, timedelta
 
 class PredictionResult:
     def __init__(self, predictedTotalDays, riskLevel, confidenceScore, bottlenecks, delayReasoning, onTrack, delayBreakdown):
@@ -23,102 +23,128 @@ class PredictionResult:
         }
 
 def predict_project_delay(project):
+    # Base configuration
     timeline = project.get("timeline", {})
+    funding = project.get("funding", {})
+    status = project.get("status", "Planned")
+    created_at_str = project.get("createdAt")
+    
+    # 1. Resolve Start Date and Deadline with Fallbacks
     start_date_str = timeline.get("startDate")
     deadline_str = timeline.get("deadline")
     
-    if not start_date_str or not deadline_str:
-        return None
+    # Fallback to createdAt if no startDate
+    if not start_date_str:
+        start_date_str = created_at_str or datetime.now().isoformat()
+        
+    # Fallback to +365 days if no deadline
+    if not deadline_str:
+        try:
+            def parse_date_simple(ds):
+                if not isinstance(ds, str): return datetime.now()
+                clean = ds.replace('Z', '+00:00')
+                if ' ' in clean: clean = clean.split(' ')[0]
+                try: return datetime.fromisoformat(clean)
+                except Exception: return datetime.now()
+            
+            sd = parse_date_simple(start_date_str)
+            deadline_dt = sd + timedelta(days=365)
+            deadline_str = deadline_dt.isoformat()
+        except Exception:
+            deadline_str = (datetime.now() + timedelta(days=365)).isoformat()
 
     try:
-        start_date = datetime.fromisoformat(start_date_str.replace('Z', '+00:00'))
-        deadline = datetime.fromisoformat(deadline_str.replace('Z', '+00:00'))
-    except ValueError:
-        # Fallback for other formats
-        return None
+        # Robust parsing for ISO and simple YYYY-MM-DD
+        def parse_date(ds):
+            if not isinstance(ds, str): return datetime.now()
+            clean = ds.replace('Z', '+00:00')
+            if ' ' in clean: clean = clean.split(' ')[0] # Handle space-separated time
+            try:
+                return datetime.fromisoformat(clean)
+            except ValueError:
+                try:
+                    return datetime.strptime(clean[:10], "%Y-%m-%d")
+                except Exception:
+                    return datetime.now()
 
-    today = datetime.now(start_date.tzinfo)
+        start_date = parse_date(start_date_str)
+        deadline = parse_date(deadline_str)
+    except Exception:
+        # Final fallback to avoid crash
+        start_date = datetime.now()
+        deadline = start_date + timedelta(days=365)
+
+    # Ensure tzinfo is handled
+    today = datetime.now(start_date.tzinfo if start_date.tzinfo else None)
     
     estimated_days = max(1, (deadline - start_date).days)
-    days_elapsed = max(1, (today - start_date).days)
+    days_elapsed = max(0, (today - start_date).days)
     
-    funding = project.get("funding", {})
+    # 2. Extract Progress Metrics
     percentage_completed = funding.get("utilizationPercent", 0)
-    
-    status = project.get("status", "Planned")
-    risk_factors = 5 if status == 'On Hold' else 0 if status == 'Planned' else 2
+    # Risk factor weights
+    risk_factors = 5 if status == 'On Hold' else 4 if status == 'Delayed' else 1 if status == 'Cancelled' else 0 if status == 'Planned' else 2
     
     budget_utilization = funding.get("utilizationPercent", 0)
-    team_size = project.get("teamsize", 10)
+    team_size = project.get("teamsize") or project.get("teamSize", 10)
     team_density = team_size / (estimated_days / 30.0)
     
-    time_ratio = days_elapsed / estimated_days
+    # 3. Prediction Algorithm
+    time_ratio = days_elapsed / estimated_days if estimated_days > 0 else 1
     completion_ratio = percentage_completed / 100.0
     risk_ratio = risk_factors / 5.0
     budget_ratio = budget_utilization / 100.0
     
-    # Weights for: TimeRatio, CompletionRatio, RiskRatio, BudgetRatio
-    # multiplier = 1 + (time_ratio * 0.8 - completion_ratio * 1.2 + risk_ratio * 0.5 + budget_ratio * 0.3)
-    # Using the same logic as the V2 model implemented in frontend
+    # Multiplier Logic
     prediction_val = (time_ratio * 0.8) - (completion_ratio * 1.2) + (risk_ratio * 0.5) + (budget_ratio * 0.3)
-    multiplier = 1 + prediction_val
+    multiplier = 1 + max(-0.2, min(0.8, prediction_val)) # Cap influence
+    
     predicted_days = max(estimated_days, round(estimated_days * multiplier))
-    
     delay_ratio = predicted_days / estimated_days
-    is_ahead = percentage_completed > (time_ratio * 100 + 5)
-    is_on_track = not is_ahead and abs(percentage_completed - (time_ratio * 100)) <= 5
     
+    is_ahead = percentage_completed > (time_ratio * 100 + 5)
+    is_on_track = not is_ahead and abs(percentage_completed - (time_ratio * 100)) <= 10
+    
+    # 4. Categorization
     risk_level = 'Low'
-    if delay_ratio > 1.4 or (budget_utilization > percentage_completed + 20):
+    if delay_ratio > 1.35 or (budget_utilization > percentage_completed + 25):
         risk_level = 'High'
-    elif delay_ratio > 1.15 or risk_factors > 2:
+    elif delay_ratio > 1.1 or risk_factors >= 3:
         risk_level = 'Medium'
         
-    confidence_score = max(0.65, 1 - (risk_factors * 0.08) - (abs(percentage_completed/100.0 - budget_utilization/100.0) * 0.15))
+    confidence_score = max(0.6, 1 - (risk_factors * 0.07) - (abs(percentage_completed/100.0 - budget_utilization/100.0) * 0.15))
     
     possible_bottlenecks = [
-        "Material Supply Chain",
-        "Labor Availability",
-        "Environmental Clearances",
-        "Funding Disbursement",
-        "Technical Complexity",
-        "Regulatory Approvals",
-        "Site Logistics"
+        "Material Supply Chain", "Labor Availability", "Environmental Clearances",
+        "Funding Disbursement", "Technical Complexity", "Regulatory Approvals", "Site Logistics"
     ]
     
     bottlenecks = []
-    if risk_factors > 3:
+    if risk_factors >= 3:
         bottlenecks.append(possible_bottlenecks[risk_factors % 7])
-        bottlenecks.append(possible_bottlenecks[(risk_factors + 2) % 7])
-    elif risk_factors > 0:
-        bottlenecks.append(possible_bottlenecks[risk_factors % 7])
-        
-    if budget_utilization > percentage_completed + 15:
+    if budget_utilization > percentage_completed + 10:
         bottlenecks.append("Capital Inefficiency")
-    if team_density < 2:
+    if team_density < 1.5:
         bottlenecks.append("Understaffing Risk")
-        
     bottlenecks = list(set(bottlenecks))
     
-    delay_reasoning = ""
+    # 5. Reasoning Generation
     time_consumed_percent = round(time_ratio * 100)
     budget_overrun = budget_utilization - percentage_completed
-    city = project.get("location", {}).get("city", "Site")
-    project_type = project.get("projectType", "infrastructure")
+    city = project.get("location", {}).get("city", "the site")
+    project_type = project.get("projectType", "infrastructure project")
 
     if is_ahead:
-        delay_reasoning = f"Optimized execution detected. Project is {round(percentage_completed - time_ratio * 100)}% ahead of schedule with high labor efficiency in {city}."
+        delay_reasoning = f"Optimized execution detected. Project is {round(percentage_completed - time_ratio * 100)}% ahead of schedule in {city}."
     elif is_on_track:
-        delay_reasoning = "Operational excellence maintained. Resource allocation matches physical progress metrics within a 5% variance margin."
+        delay_reasoning = "Operational excellence maintained. Resource allocation matches physical progress metrics."
     else:
-        if budget_overrun > 20:
-            delay_reasoning = f"Financial-Physical decoupling: {budget_utilization}% budget spent vs {percentage_completed}% work done. High risk of liquidity-induced stoppage."
-        elif time_consumed_percent > percentage_completed + 15:
-            delay_reasoning = f"Velocity mismatch. Time exhaustion ({time_consumed_percent}%) significantly outpaces verified work ({percentage_completed}%). Typical of {project_type} bottlenecks."
-        elif risk_factors > 3:
-            delay_reasoning = f"Critical path blocked by external environmental factors and {bottlenecks[0] if bottlenecks else 'compliance issues'}. Timeline recovery depends on site clearance."
+        if budget_overrun > 15:
+            delay_reasoning = f"Financial strain: {budget_utilization}% budget spent vs {percentage_completed}% work done. Risk of capital exhaustion."
+        elif time_consumed_percent > percentage_completed + 10:
+            delay_reasoning = f"Velocity mismatch. Time exhaustion ({time_consumed_percent}%) outpaces work ({percentage_completed}%). Typical of {project_type} delays."
         else:
-            delay_reasoning = f"Minor logistical friction in {city}. Predicted delay is manageable through secondary resource surge and team size optimization."
+            delay_reasoning = f"Structural logistical friction in {city}. Predicted delay is manageable through resource surge."
 
     return {
         "predictedTotalDays": predicted_days,

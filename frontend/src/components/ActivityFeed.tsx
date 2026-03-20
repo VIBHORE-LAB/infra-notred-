@@ -9,6 +9,7 @@ interface ActivityFeedProps {
   companyWide?: boolean;
   title?: string;
   description?: string;
+  maxHeightClassName?: string;
 }
 
 const humanizeAction = (action: string) =>
@@ -33,6 +34,7 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({
   companyWide = false,
   title,
   description,
+  maxHeightClassName,
 }) => {
   const { companyLogs, projectLogs, loading, fetchCompanyActivity, fetchProjectActivity } = useActivity();
 
@@ -79,7 +81,7 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({
             No activity has been recorded yet.
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className={`space-y-4 overflow-y-auto pr-1 ${maxHeightClassName ?? ''}`}>
             {logs.map((log) => (
               <div key={log.id} className="relative pl-6">
                 <div className="absolute left-0 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary/10 text-primary">

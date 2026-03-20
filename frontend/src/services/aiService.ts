@@ -96,3 +96,30 @@ export const simulateProjectImpact = async (
     return null;
   }
 };
+export interface AiSummaryResponse {
+  predictions: Record<string, PredictionResult>;
+  stats: {
+    highRiskCount: number;
+    medRiskCount: number;
+    totalAnalyzed: number;
+    topRisks: Array<{ id: string; name: string }>;
+  };
+}
+
+export const fetchAiSummary = async (): Promise<AiSummaryResponse | null> => {
+  try {
+    const res = await instance.get('/ai/summary', {
+      headers: {
+        "x-company-code": localStorage.getItem("companyCode") || ""
+      }
+    });
+
+    if (res.data?.status === "success") {
+      return res.data.data as AiSummaryResponse;
+    }
+    return null;
+  } catch (error) {
+    console.error("Failed to fetch AI summary:", error);
+    return null;
+  }
+};

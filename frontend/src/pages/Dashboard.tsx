@@ -12,6 +12,7 @@ import {
   Tag,
   Wallet,
   X,
+  Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ActivityFeed from '@/components/ActivityFeed';
@@ -19,8 +20,9 @@ import AiRiskSummaryWidget from '@/components/AiRiskSummaryWidget';
 import GISData from '@/components/GISData';
 import instance from '@/api/api';
 import { useAuth } from '@/context/AuthContext';
+import { useActivity } from '@/hooks/useActivity';
 import { Project, useProjects } from '@/hooks/useProjects';
-import { batchPredictProjects, PredictionResult } from '@/services/aiService';
+import { fetchAiSummary, batchPredictProjects, PredictionResult } from '@/services/aiService';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -185,6 +187,7 @@ const Dashboard: React.FC = () => {
     bulkAddTags, bulkUpdateStatus,
     projects, availableTags, loading: projectsLoading,
   } = useProjects();
+  const { seedDemoActivity, fetchCompanyActivity } = useActivity();
 
   const [search, setSearch] = useState('');
   const [activeTag, setActiveTag] = useState('');
@@ -195,6 +198,7 @@ const Dashboard: React.FC = () => {
   const [bulkTagOpen, setBulkTagOpen] = useState(false);
   const [allPredictions, setAllPredictions] = useState<Map<string, PredictionResult>>(new Map());
   const [forecastLoading, setForecastLoading] = useState(false);
+  const [seeding, setSeeding] = useState(false);
   const [projectMarkers, setProjectMarkers] = useState<{
     id: string; name: string; latitude: number; longitude: number;
     description: string; projectName: string; projectDescription: string;
@@ -207,13 +211,17 @@ const Dashboard: React.FC = () => {
   // ── Init ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     const init = async () => {
-      const list = await fetchAllProjects();
+      setForecastLoading(true);
+      await fetchAllProjects();
       await fetchAvailableTags();
-      if (list.length > 0) {
-        setForecastLoading(true);
-        setAllPredictions(await batchPredictProjects(list));
-        setForecastLoading(false);
+      
+      const summary = await fetchAiSummary();
+      if (summary) {
+        const preds = new Map<string, PredictionResult>();
+        Object.entries(summary.predictions).forEach(([id, p]) => preds.set(id, p));
+        setAllPredictions(preds);
       }
+      setForecastLoading(false);
     };
     void init();
   }, [fetchAllProjects, fetchAvailableTags]);
@@ -277,6 +285,33 @@ const Dashboard: React.FC = () => {
   const allVisibleSelected = filteredProjects.length > 0 && filteredProjects.every((p) => selectedProjects.includes(p.id));
 
   // ── Handlers ──────────────────────────────────────────────────────────────
+  const handleSeedData = async () => {
+    setSeeding(true);
+    const t = toast.loading('Seeding demo data...');
+    try {
+      const res = await seedDemoActivity();
+      if (res) {
+        toast.success(`Seeded ${res.logsCreated} activities!`, { id: t });
+        await fetchAllProjects();
+        setForecastLoading(true);
+        const summary = await fetchAiSummary();
+        if (summary) {
+          const preds = new Map<string, PredictionResult>();
+          Object.entries(summary.predictions).forEach(([id, p]) => preds.set(id, p));
+          setAllPredictions(preds);
+        }
+        setForecastLoading(false);
+        await fetchCompanyActivity(1, 20);
+      } else {
+        toast.error('Failed to seed data', { id: t });
+      }
+    } catch {
+      toast.error('An error occurred during seeding', { id: t });
+    } finally {
+      setSeeding(false);
+    }
+  };
+
   const applyTagFilter = async (tag: string) => {
     if (!tag || tag === 'all') { setActiveTag(''); setTagFilteredProjects(null); return; }
     const result = await fetchProjectsByTag(tag);
@@ -346,6 +381,18 @@ const Dashboard: React.FC = () => {
           </p>
         </div>
         <div className="flex gap-2">
+          {user?.role === 'owner' && (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="rounded-xl border-dashed"
+              onClick={handleSeedData}
+              disabled={seeding}
+            >
+              <Sparkles className={cn("mr-1.5 h-3.5 w-3.5", seeding && "animate-spin")} />
+              {seeding ? 'Seeding...' : 'Seed sample data'}
+            </Button>
+          )}
           <Button asChild variant="outline" size="sm" className="rounded-xl">
             <Link to="/public">Public portal</Link>
           </Button>
@@ -630,6 +677,7 @@ const Dashboard: React.FC = () => {
             companyWide
             title="Company activity"
             description="Recent actions across your team"
+            maxHeightClassName="max-h-[min(60vh,42rem)]"
           />
         </div>
       </div>
