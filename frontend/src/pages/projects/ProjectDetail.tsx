@@ -934,7 +934,7 @@ const ProjectDetail: React.FC = () => {
   }
 
   return (
-    <div className="page-grid">
+    <div className="page-grid mx-auto w-full max-w-[1440px]">
       {actionsError ? (
         <Alert variant="destructive">
           <AlertTitle>Action failed</AlertTitle>
@@ -951,7 +951,7 @@ const ProjectDetail: React.FC = () => {
 
       <Card className="border-border/80">
         <CardHeader className="gap-6">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+          <div className="flex flex-col gap-5 2xl:flex-row 2xl:items-start 2xl:justify-between">
             <div className="space-y-4">
               <Button variant="outline" className="w-fit rounded-2xl" onClick={() => navigate(-1)}>
                 <ArrowLeft className="h-4 w-4" />
@@ -1093,7 +1093,7 @@ const ProjectDetail: React.FC = () => {
           </div>
         </CardHeader>
 
-        <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
           <div className="metric-card">
             <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Location</p>
             <p className="mt-2 font-semibold text-foreground">{projectLocation || 'Not specified'}</p>
@@ -1123,26 +1123,26 @@ const ProjectDetail: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="overview" className="min-w-0 gap-6">
-        <div className="sticky top-3 z-20 overflow-hidden rounded-2xl border border-border/70 bg-background/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/80">
-          <TabsList
-            variant="line"
-            className="flex w-full justify-start overflow-x-auto rounded-none px-2 py-2 whitespace-nowrap"
-          >
-            <TabsTrigger value="overview" className="shrink-0 px-4 py-2.5">Overview</TabsTrigger>
-            <TabsTrigger value="milestones" className="shrink-0 px-4 py-2.5">Milestones</TabsTrigger>
-            <TabsTrigger value="updates" className="shrink-0 px-4 py-2.5">Updates</TabsTrigger>
-            <TabsTrigger value="files" className="shrink-0 px-4 py-2.5">Files</TabsTrigger>
-            <TabsTrigger value="timeline" className="shrink-0 px-4 py-2.5">Timeline</TabsTrigger>
-            <TabsTrigger value="issues" className="shrink-0 px-4 py-2.5">Issues</TabsTrigger>
-            <TabsTrigger value="site-logs" className="shrink-0 px-4 py-2.5">Site Logs</TabsTrigger>
-            <TabsTrigger value="approvals" className="shrink-0 px-4 py-2.5">Approvals</TabsTrigger>
+<Tabs defaultValue="overview" className="min-w-0 flex flex-col gap-6">
+        <div className="sticky top-4 z-20 overflow-hidden rounded-2xl border border-border/70 bg-background/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/80">
+<TabsList
+  variant="line"
+  className="flex w-full justify-start overflow-x-auto rounded-none px-2 py-2 whitespace-nowrap"
+><TabsTrigger value="overview" className="shrink-0 px-4 py-2.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-medium rounded-xl">Overview</TabsTrigger>
+<TabsTrigger value="milestones" className="shrink-0 px-4 py-2.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-medium rounded-xl">Milestones</TabsTrigger>
+<TabsTrigger value="updates" className="shrink-0 px-4 py-2.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-medium rounded-xl">Updates</TabsTrigger>
+<TabsTrigger value="files" className="shrink-0 px-4 py-2.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-medium rounded-xl">Files</TabsTrigger>
+<TabsTrigger value="timeline" className="shrink-0 px-4 py-2.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-medium rounded-xl">Timeline</TabsTrigger>
+<TabsTrigger value="issues" className="shrink-0 px-4 py-2.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-medium rounded-xl">Issues</TabsTrigger>
+<TabsTrigger value="site-logs" className="shrink-0 px-4 py-2.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-medium rounded-xl">Site Logs</TabsTrigger>
+<TabsTrigger value="approvals" className="shrink-0 px-4 py-2.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:font-medium rounded-xl">Approvals</TabsTrigger>
+
           </TabsList>
         </div>
 
         <div className="min-w-0 overflow-x-hidden">
         <TabsContent value="overview" className="min-w-0 space-y-6">
-          <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+          <div className="grid gap-6 2xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
             <Card className="border-border/80">
               <CardHeader>
                 <CardTitle>Delivery outlook</CardTitle>
@@ -1231,7 +1231,7 @@ const ProjectDetail: React.FC = () => {
             />
           ) : null}
 
-          <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+          <div className="grid gap-6 2xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
             <Card className="border-border/80">
               <CardHeader className="gap-3">
                 <div className="flex items-center justify-between gap-3">
@@ -1344,7 +1344,7 @@ const ProjectDetail: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="milestones" className="min-w-0 space-y-6">
-          <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+          <div className="grid gap-6 2xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
             <Card className="border-border/80">
               <CardHeader>
                 <CardTitle>Milestone analytics</CardTitle>
@@ -1487,7 +1487,7 @@ const ProjectDetail: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="updates" className="min-w-0 space-y-6">
-          <div className="grid gap-6 xl:grid-cols-2">
+          <div className="grid gap-6 2xl:grid-cols-2">
             <Card className="border-border/80">
               <CardHeader className="gap-3">
                 <div className="flex items-center justify-between gap-3">
@@ -1730,7 +1730,7 @@ const ProjectDetail: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="timeline" className="min-w-0 space-y-6">
-          <div className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
+          <div className="grid gap-6 2xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
             <Card className="border-border/80">
               <CardHeader>
                 <CardTitle>Timeline management</CardTitle>
@@ -1881,7 +1881,7 @@ const ProjectDetail: React.FC = () => {
         <TabsContent value="issues" className="min-w-0 space-y-6">
           <Card className="border-border/80">
             <CardHeader className="gap-4">
-              <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+              <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-end 2xl:justify-between">
                 <div>
                   <CardTitle>Issue tracker</CardTitle>
                   <CardDescription>
@@ -1960,7 +1960,7 @@ const ProjectDetail: React.FC = () => {
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
                 <div className="metric-card">
                   <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Total</p>
                   <p className="mt-2 text-2xl font-semibold text-foreground">{issueStats.total}</p>
@@ -1979,7 +1979,7 @@ const ProjectDetail: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid gap-6 xl:grid-cols-[0.82fr_1.18fr]">
+              <div className="grid gap-6 2xl:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)]">
                 <Card className="border-border/70">
                   <CardHeader>
                     <CardTitle>Report issue</CardTitle>
@@ -2165,7 +2165,7 @@ const ProjectDetail: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="site-logs" className="min-w-0 space-y-6">
-          <div className="grid gap-6 xl:grid-cols-[0.82fr_1.18fr]">
+          <div className="grid gap-6 2xl:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)]">
             <Card className="border-border/80">
               <CardHeader>
                 <CardTitle>Log today's conditions</CardTitle>
@@ -2290,7 +2290,7 @@ const ProjectDetail: React.FC = () => {
 
             <Card className="border-border/80">
               <CardHeader className="gap-4">
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+                <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-end 2xl:justify-between">
                   <div>
                     <CardTitle>Site log summary</CardTitle>
                     <CardDescription>Review site condition history and operational trends over time.</CardDescription>
@@ -2315,7 +2315,7 @@ const ProjectDetail: React.FC = () => {
                 </Button>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
                   <div className="metric-card">
                     <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Total days logged</p>
                     <p className="mt-2 text-2xl font-semibold text-foreground">{siteSummaryMeta.summary.totalDaysLogged}</p>
@@ -2334,7 +2334,7 @@ const ProjectDetail: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
+                <div className="grid gap-6 2xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
                   <div className="rounded-3xl border border-border/70 bg-muted/20 p-4">
                     <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
                       <CloudSun className="h-4 w-4 text-primary" />
@@ -2403,7 +2403,7 @@ const ProjectDetail: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="approvals" className="min-w-0 space-y-6">
-          <div className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
+          <div className="grid gap-6 2xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
             <Card className="border-border/80">
               <CardHeader>
                 <CardTitle>Issue sign-off</CardTitle>

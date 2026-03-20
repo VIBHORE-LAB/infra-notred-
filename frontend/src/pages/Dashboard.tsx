@@ -400,62 +400,55 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Summary band ────────────────────────────────────────────────────── */}
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-stretch">
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="rounded-2xl bg-card p-5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Portfolio load</span>
-              <FolderKanban className="h-4 w-4 text-blue-500" />
-            </div>
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
-                <p className="text-xs text-muted-foreground">Projects</p>
-                <p className="mt-2 text-3xl font-semibold tracking-tight text-foreground">{projects.length}</p>
-              </div>
-              <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs text-muted-foreground">High risk</p>
-                  <MapPinned className="h-3.5 w-3.5 text-rose-500" />
-                </div>
-                <p className="mt-2 text-3xl font-semibold tracking-tight text-foreground">{highRisk}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-2xl bg-card p-5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Funding snapshot</span>
-              <Wallet className="h-4 w-4 text-emerald-500" />
-            </div>
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
-                <p className="text-xs text-muted-foreground">Total budget</p>
-                <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">{formatCurrency(totalBudget)}</p>
-              </div>
-              <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs text-muted-foreground">Avg utilization</p>
-                  <ShieldCheck className="h-3.5 w-3.5 text-violet-500" />
-                </div>
-                <p className="mt-2 text-3xl font-semibold tracking-tight text-foreground">{avgUtil}%</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <AiRiskSummaryWidget
-          projects={projects}
-          predictions={allPredictions}
-          loading={forecastLoading}
-          maxHeightClassName={DASHBOARD_FORECAST_MAX_HEIGHT}
-        />
-      </div>
-
       {/* ── Main grid ───────────────────────────────────────────────────────── */}
-      <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
         {/* Left column */}
         <div className="space-y-6">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-2xl bg-card px-5 py-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Portfolio load</span>
+                <FolderKanban className="h-4 w-4 text-blue-500" />
+              </div>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div className="min-w-0">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Projects</p>
+                    <p className="mt-1 text-3xl font-semibold tracking-tight text-foreground">{projects.length}</p>
+                  </div>
+                </div>
+                <div className="flex items-end justify-between gap-3 border-l border-border/60 pl-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">High risk</p>
+                    <p className="mt-1 text-3xl font-semibold tracking-tight text-foreground">{highRisk}</p>
+                  </div>
+                  <MapPinned className="h-4 w-4 text-rose-500" />
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-card px-5 py-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Funding snapshot</span>
+                <Wallet className="h-4 w-4 text-emerald-500" />
+              </div>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div className="min-w-0">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Total budget</p>
+                    <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">{formatCurrency(totalBudget)}</p>
+                  </div>
+                </div>
+                <div className="flex items-end justify-between gap-3 border-l border-border/60 pl-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Avg utilization</p>
+                    <p className="mt-1 text-3xl font-semibold tracking-tight text-foreground">{avgUtil}%</p>
+                  </div>
+                  <ShieldCheck className="h-4 w-4 text-violet-500" />
+                </div>
+              </div>
+            </div>
+          </div>
 
           {/* Projects table */}
           <div className={`flex flex-col overflow-hidden rounded-2xl bg-card ${DASHBOARD_TOP_PANEL_MAX_HEIGHT}`}>
@@ -615,7 +608,7 @@ const Dashboard: React.FC = () => {
                       <TableHead>Status</TableHead>
                       <TableHead>Funding</TableHead>
                       <TableHead>Forecast</TableHead>
-                      <TableHead className="pr-5 text-right">Actions</TableHead>
+                      <TableHead className="pr-5 text-right">Open</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -671,8 +664,8 @@ const Dashboard: React.FC = () => {
                             )}
                           </TableCell>
                           <TableCell className="pr-5 text-right">
-                            <Button asChild variant="outline" size="sm" className="h-7  rounded-xl text-xs">
-                              <Link to={`/projects/${project.id}`}>Open Project</Link>
+                            <Button asChild variant="ghost" size="sm" className="h-7 rounded-xl text-xs">
+                              <Link to={`/projects/${project.id}`}>Open</Link>
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -705,6 +698,12 @@ const Dashboard: React.FC = () => {
 
         {/* Right column */}
         <div className="space-y-6">
+          <AiRiskSummaryWidget
+            projects={projects}
+            predictions={allPredictions}
+            loading={forecastLoading}
+            maxHeightClassName={DASHBOARD_FORECAST_MAX_HEIGHT}
+          />
           <ActivityFeed
             companyWide
             title="Company activity"

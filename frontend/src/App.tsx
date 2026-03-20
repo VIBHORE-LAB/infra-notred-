@@ -11,6 +11,7 @@ import { AuthProvider } from '@/context/AuthContext';
 const Register = React.lazy(() => import('@/pages/auth/Register'));
 const Login = React.lazy(() => import('@/pages/auth/Login'));
 const Dashboard = React.lazy(() => import('@/pages/Dashboard'));
+const Projects = React.lazy(() => import('@/pages/Projects'));
 const PublicPortal = React.lazy(() => import('@/pages/PublicPortal'));
 const PublicProjectThread = React.lazy(() => import('@/pages/public/PublicProjectThread'));
 const PublicMap = React.lazy(() => import('@/pages/PublicMap'));
@@ -97,7 +98,7 @@ const App: React.FC = () => {
                 path="/projects"
                 element={
                   <ProtectedPage
-                    Page={Dashboard}
+                    Page={Projects}
                     allowedRoles={['admin', 'owner', 'manager', 'field agent', 'user']}
                     label="Loading projects…"
                   />
