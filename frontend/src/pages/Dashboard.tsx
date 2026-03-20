@@ -22,7 +22,7 @@ import instance from '@/api/api';
 import { useAuth } from '@/context/AuthContext';
 import { useActivity } from '@/hooks/useActivity';
 import { Project, useProjects } from '@/hooks/useProjects';
-import { fetchAiSummary, batchPredictProjects, PredictionResult } from '@/services/aiService';
+import { fetchAiSummary, PredictionResult } from '@/services/aiService';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
