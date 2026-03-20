@@ -4,18 +4,18 @@ runtime: python311
 build:
   commands:
     build:
-      - pip3 install -r requirements.txt
+      - pip3 install -r requirements.txt --target vendor
 
 run:
   runtime-version: "3.11"
-  command: gunicorn --bind 0.0.0.0:8000 --workers 2 --timeout 120 run:app
+  command: PYTHONPATH=vendor python3 -m gunicorn --bind 0.0.0.0:8080 --workers 2 --timeout 120 run:app
   network:
-    port: 8000
+    port: 8080
   env:
     - name: FLASK_ENV
       value: production
     - name: PORT
-      value: "8000"
+      value: "8080"
     - name: MONGO_DBNAME
       value: infradb
     - name: MONGO_URI

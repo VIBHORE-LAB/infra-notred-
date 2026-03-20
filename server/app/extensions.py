@@ -9,6 +9,8 @@ class MongoDB:
     def init_app(self, app):
         uri = app.config.get("MONGO_URI")
         db_name = app.config.get("MONGO_DBNAME", "infradb")
+        if not uri:
+            raise RuntimeError("MONGO_URI env var is not set. Cannot start the application.")
         client = MongoClient(uri)
         self._db = client[db_name]
         print(f"[DEBUG] MongoDB connected to database: '{db_name}'")
