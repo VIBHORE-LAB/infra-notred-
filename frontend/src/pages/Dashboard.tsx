@@ -48,6 +48,8 @@ import { cn } from '@/lib/utils';
 
 const GEOCODE_CACHE_KEY = 'project_location_geocode_cache_v1';
 const BULK_STATUSES = ['Planned', 'In Progress', 'On Hold', 'Completed', 'Cancelled', 'Under Review'];
+const DASHBOARD_TOP_PANEL_MAX_HEIGHT = 'xl:max-h-[min(48vh,34rem)]';
+const DASHBOARD_FORECAST_MAX_HEIGHT = 'xl:max-h-[min(24vh,17rem)]';
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const getGeocodeCache = (): Record<string, { lat: number; lon: number }> => {
@@ -425,7 +427,7 @@ const Dashboard: React.FC = () => {
         <div className="space-y-6">
 
           {/* Projects table */}
-          <div className="rounded-2xl bg-card">
+          <div className={`flex flex-col overflow-hidden rounded-2xl bg-card ${DASHBOARD_TOP_PANEL_MAX_HEIGHT}`}>
             {/* Table header bar */}
             <div className="flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -556,16 +558,16 @@ const Dashboard: React.FC = () => {
 
             {/* Table */}
             {projectsLoading ? (
-              <div className="flex h-48 items-center justify-center">
+              <div className="flex min-h-[16rem] flex-1 items-center justify-center">
                 <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
               </div>
             ) : filteredProjects.length === 0 ? (
-              <div className="flex h-48 flex-col items-center justify-center gap-2 px-5 text-center">
+              <div className="flex min-h-[16rem] flex-1 flex-col items-center justify-center gap-2 px-5 text-center">
                 <p className="text-sm font-medium text-foreground">No projects match</p>
                 <p className="text-xs text-muted-foreground">Try another search term or click a different tag above</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="min-h-0 flex-1 overflow-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="border-border/50">
@@ -650,7 +652,7 @@ const Dashboard: React.FC = () => {
               </div>
             )}
             {/* bottom padding */}
-            <div className="h-3" />
+            <div className="h-2 shrink-0" />
           </div>
 
           {/* Map */}
@@ -664,7 +666,7 @@ const Dashboard: React.FC = () => {
                 {projectMarkers.length} markers
               </span>
             </div>
-            <div className="mx-4 mb-4 h-[380px] overflow-hidden rounded-xl">
+            <div className="mx-4 mb-4 h-[320px] overflow-hidden rounded-xl">
               <GISData staticMarkers={projectMarkers} />
             </div>
           </div>
@@ -672,12 +674,17 @@ const Dashboard: React.FC = () => {
 
         {/* Right column */}
         <div className="space-y-6">
-          <AiRiskSummaryWidget projects={projects} predictions={allPredictions} loading={forecastLoading} />
+          <AiRiskSummaryWidget
+            projects={projects}
+            predictions={allPredictions}
+            loading={forecastLoading}
+            maxHeightClassName={DASHBOARD_FORECAST_MAX_HEIGHT}
+          />
           <ActivityFeed
             companyWide
             title="Company activity"
             description="Recent actions across your team"
-            maxHeightClassName="max-h-[min(60vh,42rem)]"
+            maxHeightClassName="max-h-[min(72vh,46rem)]"
           />
         </div>
       </div>

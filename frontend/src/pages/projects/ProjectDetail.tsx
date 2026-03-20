@@ -1123,19 +1123,25 @@ const ProjectDetail: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="overview" className="gap-6">
-        <TabsList variant="line" className="w-full justify-start overflow-x-auto rounded-none p-0">
-          <TabsTrigger value="overview" className="px-4 py-2.5">Overview</TabsTrigger>
-          <TabsTrigger value="milestones" className="px-4 py-2.5">Milestones</TabsTrigger>
-          <TabsTrigger value="updates" className="px-4 py-2.5">Updates</TabsTrigger>
-          <TabsTrigger value="files" className="px-4 py-2.5">Files</TabsTrigger>
-          <TabsTrigger value="timeline" className="px-4 py-2.5">Timeline</TabsTrigger>
-          <TabsTrigger value="issues" className="px-4 py-2.5">Issues</TabsTrigger>
-          <TabsTrigger value="site-logs" className="px-4 py-2.5">Site Logs</TabsTrigger>
-          <TabsTrigger value="approvals" className="px-4 py-2.5">Approvals</TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="overview" className="min-w-0 gap-6">
+        <div className="sticky top-3 z-20 overflow-hidden rounded-2xl border border-border/70 bg-background/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <TabsList
+            variant="line"
+            className="flex w-full justify-start overflow-x-auto rounded-none px-2 py-2 whitespace-nowrap"
+          >
+            <TabsTrigger value="overview" className="shrink-0 px-4 py-2.5">Overview</TabsTrigger>
+            <TabsTrigger value="milestones" className="shrink-0 px-4 py-2.5">Milestones</TabsTrigger>
+            <TabsTrigger value="updates" className="shrink-0 px-4 py-2.5">Updates</TabsTrigger>
+            <TabsTrigger value="files" className="shrink-0 px-4 py-2.5">Files</TabsTrigger>
+            <TabsTrigger value="timeline" className="shrink-0 px-4 py-2.5">Timeline</TabsTrigger>
+            <TabsTrigger value="issues" className="shrink-0 px-4 py-2.5">Issues</TabsTrigger>
+            <TabsTrigger value="site-logs" className="shrink-0 px-4 py-2.5">Site Logs</TabsTrigger>
+            <TabsTrigger value="approvals" className="shrink-0 px-4 py-2.5">Approvals</TabsTrigger>
+          </TabsList>
+        </div>
 
-        <TabsContent value="overview" className="space-y-6">
+        <div className="min-w-0 overflow-x-hidden">
+        <TabsContent value="overview" className="min-w-0 space-y-6">
           <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
             <Card className="border-border/80">
               <CardHeader>
@@ -1337,7 +1343,7 @@ const ProjectDetail: React.FC = () => {
           </div>
         </TabsContent>
 
-        <TabsContent value="milestones" className="space-y-6">
+        <TabsContent value="milestones" className="min-w-0 space-y-6">
           <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
             <Card className="border-border/80">
               <CardHeader>
@@ -1480,7 +1486,7 @@ const ProjectDetail: React.FC = () => {
           </div>
         </TabsContent>
 
-        <TabsContent value="updates" className="space-y-6">
+        <TabsContent value="updates" className="min-w-0 space-y-6">
           <div className="grid gap-6 xl:grid-cols-2">
             <Card className="border-border/80">
               <CardHeader className="gap-3">
@@ -1612,7 +1618,7 @@ const ProjectDetail: React.FC = () => {
           </div>
         </TabsContent>
 
-        <TabsContent value="files" className="space-y-6">
+        <TabsContent value="files" className="min-w-0 space-y-6">
           <Card className="border-border/80">
             <CardHeader className="gap-3">
               <div className="flex items-center justify-between gap-3">
@@ -1723,7 +1729,7 @@ const ProjectDetail: React.FC = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="timeline" className="space-y-6">
+        <TabsContent value="timeline" className="min-w-0 space-y-6">
           <div className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
             <Card className="border-border/80">
               <CardHeader>
@@ -1872,7 +1878,7 @@ const ProjectDetail: React.FC = () => {
           </div>
         </TabsContent>
 
-        <TabsContent value="issues" className="space-y-6">
+        <TabsContent value="issues" className="min-w-0 space-y-6">
           <Card className="border-border/80">
             <CardHeader className="gap-4">
               <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
@@ -2158,7 +2164,7 @@ const ProjectDetail: React.FC = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="site-logs" className="space-y-6">
+        <TabsContent value="site-logs" className="min-w-0 space-y-6">
           <div className="grid gap-6 xl:grid-cols-[0.82fr_1.18fr]">
             <Card className="border-border/80">
               <CardHeader>
@@ -2396,7 +2402,7 @@ const ProjectDetail: React.FC = () => {
           </div>
         </TabsContent>
 
-        <TabsContent value="approvals" className="space-y-6">
+        <TabsContent value="approvals" className="min-w-0 space-y-6">
           <div className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
             <Card className="border-border/80">
               <CardHeader>
@@ -2549,6 +2555,7 @@ const ProjectDetail: React.FC = () => {
             </Card>
           </div>
         </TabsContent>
+        </div>
       </Tabs>
 
       <Dialog open={milestoneDialogOpen} onOpenChange={setMilestoneDialogOpen}>

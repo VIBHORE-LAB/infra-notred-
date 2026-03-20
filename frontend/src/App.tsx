@@ -94,6 +94,16 @@ const App: React.FC = () => {
                 }
               />
               <Route
+                path="/projects"
+                element={
+                  <ProtectedPage
+                    Page={Dashboard}
+                    allowedRoles={['admin', 'owner', 'manager', 'field agent', 'user']}
+                    label="Loading projects…"
+                  />
+                }
+              />
+              <Route
                 path="/projects/create"
                 element={
                   <ProtectedPage

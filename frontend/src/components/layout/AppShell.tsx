@@ -4,6 +4,7 @@ import {
   BarChart3,
   ClipboardPlus,
   ClipboardSignature,
+  FolderKanban,
   Globe2,
   LayoutDashboard,
   LineChart,
@@ -43,6 +44,12 @@ const NAV_ITEMS: NavItem[] = [
     roles: ['admin', 'owner', 'manager', 'field agent', 'user'],
     icon: LayoutDashboard,
   },
+  {
+    label: 'All Projects',
+    to: '/projects',
+    roles: ['admin', 'owner', 'manager', 'field agent', 'user'],
+    icon: FolderKanban,
+  },
   { label: 'Create Project', to: '/projects/create', roles: ['owner'], icon: ClipboardPlus },
   {
     label: 'Field Reports',
@@ -74,6 +81,10 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   '/projects/create': {
     title: 'Create Project',
     subtitle: 'Configure scope, timeline, budget, and location details.',
+  },
+  '/projects': {
+    title: 'All Projects',
+    subtitle: 'Browse the full portfolio and open any project workspace.',
   },
   '/field-agent/report': {
     title: 'Field Report Center',
@@ -147,6 +158,7 @@ const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const isActive = (to: string) => {
     if (to === '/dashboard') return location.pathname === '/dashboard';
+    if (to === '/projects') return location.pathname === '/projects';
     return location.pathname.startsWith(to);
   };
 
