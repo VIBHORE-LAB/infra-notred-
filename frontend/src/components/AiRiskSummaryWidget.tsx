@@ -53,7 +53,7 @@ const AiRiskSummaryWidget: React.FC<AiRiskSummaryWidgetProps> = ({
 
   if (loading) {
     return (
-      <Card className={`overflow-hidden border-border/80 ${maxHeightClassName ?? ''}`}>
+      <Card className={`min-h-[24rem] overflow-hidden border-border/80 ${maxHeightClassName ?? ''}`}>
         <CardContent className="flex min-h-[280px] flex-col items-center justify-center gap-4">
           <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
           <p className="text-sm text-muted-foreground">Preparing forecast summary…</p>
@@ -64,7 +64,7 @@ const AiRiskSummaryWidget: React.FC<AiRiskSummaryWidgetProps> = ({
 
   if (!stats) {
     return (
-      <Card className={`overflow-hidden border-border/80 ${maxHeightClassName ?? ''}`}>
+      <Card className={`min-h-[24rem] overflow-hidden border-border/80 ${maxHeightClassName ?? ''}`}>
         <CardHeader>
           <CardTitle>Forecast summary</CardTitle>
         </CardHeader>
@@ -88,8 +88,8 @@ const AiRiskSummaryWidget: React.FC<AiRiskSummaryWidgetProps> = ({
   }
 
   return (
-    <Card className={`h-full overflow-hidden border-border/80 ${maxHeightClassName ?? ''}`}>
-      <CardHeader className="gap-4">
+    <Card className={`h-full min-h-[24rem] overflow-hidden border-border/80 ${maxHeightClassName ?? ''}`}>
+      <CardHeader className="shrink-0 gap-4">
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -105,7 +105,7 @@ const AiRiskSummaryWidget: React.FC<AiRiskSummaryWidgetProps> = ({
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="flex h-full min-h-0 flex-col gap-6 overflow-hidden">
+      <CardContent className="flex flex-1 min-h-0 flex-col gap-6 overflow-hidden">
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
             <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">High risk</p>
@@ -119,7 +119,7 @@ const AiRiskSummaryWidget: React.FC<AiRiskSummaryWidgetProps> = ({
 
         <Separator />
 
-        <div className="min-h-0 space-y-4 overflow-y-auto pr-1">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-foreground">Projects to review first</p>
             <ShieldCheck className="h-4 w-4 text-muted-foreground" />

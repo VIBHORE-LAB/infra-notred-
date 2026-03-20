@@ -49,7 +49,7 @@ import { cn } from '@/lib/utils';
 const GEOCODE_CACHE_KEY = 'project_location_geocode_cache_v1';
 const BULK_STATUSES = ['Planned', 'In Progress', 'On Hold', 'Completed', 'Cancelled', 'Under Review'];
 const DASHBOARD_TOP_PANEL_MAX_HEIGHT = 'xl:max-h-[min(48vh,34rem)]';
-const DASHBOARD_FORECAST_MAX_HEIGHT = 'xl:max-h-[min(24vh,17rem)]';
+const DASHBOARD_FORECAST_MAX_HEIGHT = 'xl:max-h-[min(38vh,28rem)]';
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const getGeocodeCache = (): Record<string, { lat: number; lon: number }> => {
@@ -359,14 +359,6 @@ const Dashboard: React.FC = () => {
     if (activeTag) setTagFilteredProjects(await fetchProjectsByTag(activeTag));
   };
 
-  // ── Stat tiles ────────────────────────────────────────────────────────────
-  const stats = [
-    { label: 'Projects', value: projects.length, icon: FolderKanban, color: 'text-blue-500' },
-    { label: 'Total budget', value: formatCurrency(totalBudget), icon: Wallet, color: 'text-emerald-500' },
-    { label: 'Avg utilization', value: `${avgUtil}%`, icon: ShieldCheck, color: 'text-violet-500' },
-    { label: 'High-risk', value: highRisk, icon: MapPinned, color: 'text-rose-500' },
-  ];
-
   return (
     <div className="space-y-6">
       {/* ── Header ──────────────────────────────────────────────────────────── */}
@@ -408,17 +400,56 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Stat tiles ──────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {stats.map((s) => (
-          <div key={s.label} className="rounded-2xl bg-card p-4">
+      {/* ── Summary band ────────────────────────────────────────────────────── */}
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-stretch">
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="rounded-2xl bg-card p-5">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">{s.label}</span>
-              <s.icon className={cn('h-4 w-4', s.color)} />
+              <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Portfolio load</span>
+              <FolderKanban className="h-4 w-4 text-blue-500" />
             </div>
-            <p className="mt-3 text-2xl font-semibold tracking-tight text-foreground">{s.value}</p>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+                <p className="text-xs text-muted-foreground">Projects</p>
+                <p className="mt-2 text-3xl font-semibold tracking-tight text-foreground">{projects.length}</p>
+              </div>
+              <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs text-muted-foreground">High risk</p>
+                  <MapPinned className="h-3.5 w-3.5 text-rose-500" />
+                </div>
+                <p className="mt-2 text-3xl font-semibold tracking-tight text-foreground">{highRisk}</p>
+              </div>
+            </div>
           </div>
-        ))}
+
+          <div className="rounded-2xl bg-card p-5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Funding snapshot</span>
+              <Wallet className="h-4 w-4 text-emerald-500" />
+            </div>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+                <p className="text-xs text-muted-foreground">Total budget</p>
+                <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">{formatCurrency(totalBudget)}</p>
+              </div>
+              <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs text-muted-foreground">Avg utilization</p>
+                  <ShieldCheck className="h-3.5 w-3.5 text-violet-500" />
+                </div>
+                <p className="mt-2 text-3xl font-semibold tracking-tight text-foreground">{avgUtil}%</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <AiRiskSummaryWidget
+          projects={projects}
+          predictions={allPredictions}
+          loading={forecastLoading}
+          maxHeightClassName={DASHBOARD_FORECAST_MAX_HEIGHT}
+        />
       </div>
 
       {/* ── Main grid ───────────────────────────────────────────────────────── */}
@@ -584,7 +615,7 @@ const Dashboard: React.FC = () => {
                       <TableHead>Status</TableHead>
                       <TableHead>Funding</TableHead>
                       <TableHead>Forecast</TableHead>
-                      <TableHead className="pr-5 text-right">Open</TableHead>
+                      <TableHead className="pr-5 text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -640,8 +671,8 @@ const Dashboard: React.FC = () => {
                             )}
                           </TableCell>
                           <TableCell className="pr-5 text-right">
-                            <Button asChild variant="ghost" size="sm" className="h-7 rounded-xl text-xs">
-                              <Link to={`/projects/${project.id}`}>Open</Link>
+                            <Button asChild variant="outline" size="sm" className="h-7  rounded-xl text-xs">
+                              <Link to={`/projects/${project.id}`}>Open Project</Link>
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -674,12 +705,6 @@ const Dashboard: React.FC = () => {
 
         {/* Right column */}
         <div className="space-y-6">
-          <AiRiskSummaryWidget
-            projects={projects}
-            predictions={allPredictions}
-            loading={forecastLoading}
-            maxHeightClassName={DASHBOARD_FORECAST_MAX_HEIGHT}
-          />
           <ActivityFeed
             companyWide
             title="Company activity"
