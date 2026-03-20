@@ -1,4 +1,4 @@
-name: Deploy Backend → AWS App Runner
+name: Deploy Backend to Render
 
 on:
   push:
@@ -6,58 +6,32 @@ on:
       - main
     paths:
       - 'server/**'
+      - '.github/workflows/deploy-backend.yml'
 
 jobs:
-  deploy-backend:
-    name: Backend Deployment
+  deploy:
+    name: Trigger Render Deployment
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Notify deployment triggered
+      - name: Trigger Render Deploy Hook
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
         run: |
-          echo "✅ Push to main detected in server/"
-          echo "🚀 App Runner is auto-deploying from GitHub..."
-          echo "🔗 Service: https://console.aws.amazon.com/apprunner/home#/services"
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
-      - name: Wait for App Runner deployment to complete
-        run: |
-          SERVICE_ARN="arn:aws:apprunner:us-east-1:635621807993:service/infra-not-red-backend/aeeaf876a0f642d89cd00c9ba65e9369"
-          echo "⏳ Waiting for App Runner deployment..."
-
-          for i in $(seq 1 24); do
-            STATUS=$(aws apprunner describe-service \
-              --service-arn "$SERVICE_ARN" \
-              --query 'Service.Status' \
-              --output text)
-
-            echo "⏱ Attempt $i/24 — Current status: $STATUS"
-
-            if [ "$STATUS" = "RUNNING" ]; then
-              echo "✅ Deployment complete! Service is RUNNING."
-              exit 0
-            elif [ "$STATUS" = "CREATE_FAILED" ] || [ "$STATUS" = "UPDATE_FAILED" ]; then
-              echo "❌ Deployment FAILED. Status: $STATUS"
-              exit 1
-            fi
-
-            sleep 15
-          done
-
-          echo "⚠️ Timed out waiting for deployment (6 mins). Check App Runner console."
-          exit 1
-
-      - name: Deployment summary
-        if: success()
-        run: |
-          echo "🎉 Backend is live at: https://ndxmfpj6j2.us-east-1.awsapprunner.com"
-          echo "🔍 Health check: https://ndxmfpj6j2.us-east-1.awsapprunner.com/health"
+          if [ -z "$RENDER_DEPLOY_HOOK" ]; then
+            echo "❌ Error: RENDER_DEPLOY_HOOK secret is not set in GitHub."
+            echo "Go to Render -> Your Web Service -> Settings -> Deploy Hook -> Copy the URL."
+            echo "Then add it as a Repository Secret in GitHub named RENDER_DEPLOY_HOOK."
+            exit 1
+          fi
+          
+          echo "🚀 Triggering Render deployment via exact hook URL..."
+          response=$(curl -s -w "%{http_code}" -X POST -d '' "$RENDER_DEPLOY_HOOK")
+          http_code=$(echo "$response" | tail -n1)
+          
+          if [ "$http_code" -ne 200 ] && [ "$http_code" -ne 201 ] && [ "$http_code" -ne 204 ]; then
+            echo "❌ Failed to trigger deployment. HTTP Status: $http_code"
+            exit 1
+          else
+            echo "✅ Deployment triggered successfully! Check the Render dashboard for logs."
+          fi
