@@ -6,6 +6,19 @@ from app.models.project import create_project_schema
 from app.middlewares.auth_middleware import Authenticator
 from app.utils.role_enums import UserRole
 
+DEFAULT_PROJECT_TAGS = [
+    "road",
+    "bridge",
+    "water",
+    "power",
+    "housing",
+    "drainage",
+    "rail",
+    "inspection",
+    "priority",
+    "maintenance",
+]
+
 def get_all_projects():
     signature = "get_all_projects"
     company_code = request.headers.get("x-company-code")
@@ -32,6 +45,7 @@ def get_all_projects():
                 "timeline": p.get("timeline", {}),
                 "teamsize": p.get("teamsize", 0),
                 "projectType": p.get("projectType", ""),
+                "tags": p.get("tags", []),
             })
         return jsonify(generate_response(signature, "get_all_projects", "success", {"projects": projects})), 200
     except Exception as e:
@@ -168,6 +182,8 @@ def get_project_by_id(project_id):
                 "timeline": project["timeline"],
                 "users": project["users"],
                 "teamsize": project["teamsize"],
+                "projectType": project.get("projectType", ""),
+                "tags": project.get("tags", []),
             }
         }
     )), 200
@@ -244,3 +260,245 @@ def add_admin_to_project():
     return jsonify(generate_response(signature, "add_admin_to_project", "success", {
         "admin": response_data
     })), 200
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FEATURE 7: Project Tags & Smart Categorization
+# ─────────────────────────────────────────────────────────────────────────────
+
+def add_tags_to_project(project_id):
+    """POST /infrared/api/v1/projects/<project_id>/tags"""
+    signature = "add_tags_to_project"
+    role = (request.user_role or "").lower()
+    if role not in ["owner", "admin"]:
+        return jsonify(generate_response(signature, "add_tags_to_project", "fail", error="Only owner/admin can add tags")), 403
+
+    if not ObjectId.is_valid(project_id):
+        return jsonify(generate_response(signature, "add_tags_to_project", "fail", error="Invalid project ID")), 400
+
+    company_code = request.headers.get("x-company-code")
+    data = request.get_json(silent=True) or {}
+    payload = data.get("payload", data)
+    tags = payload.get("tags", [])
+
+    if not tags or not isinstance(tags, list):
+        return jsonify(generate_response(signature, "add_tags_to_project", "fail", error="tags must be a non-empty list")), 400
+
+    tags = [str(t).strip().lower() for t in tags if str(t).strip()]
+
+    try:
+        project = mongo.db.projects.find_one({"_id": ObjectId(project_id), "companyCode": company_code})
+        if not project:
+            return jsonify(generate_response(signature, "add_tags_to_project", "fail", error="Project not found")), 404
+
+        mongo.db.projects.update_one(
+            {"_id": ObjectId(project_id)},
+            {"$addToSet": {"tags": {"$each": tags}}}
+        )
+        updated = mongo.db.projects.find_one({"_id": ObjectId(project_id)})
+        return jsonify(generate_response(signature, "add_tags_to_project", "success", {
+            "projectId": project_id,
+            "tags": updated.get("tags", []),
+        })), 200
+    except Exception as e:
+        return jsonify(generate_response(signature, "add_tags_to_project", "fail", error=str(e))), 500
+
+
+def remove_tag_from_project(project_id):
+    """DELETE /infrared/api/v1/projects/<project_id>/tags"""
+    signature = "remove_tag_from_project"
+    role = (request.user_role or "").lower()
+    if role not in ["owner", "admin"]:
+        return jsonify(generate_response(signature, "remove_tag_from_project", "fail", error="Unauthorized")), 403
+
+    if not ObjectId.is_valid(project_id):
+        return jsonify(generate_response(signature, "remove_tag_from_project", "fail", error="Invalid project ID")), 400
+
+    company_code = request.headers.get("x-company-code")
+    data = request.get_json(silent=True) or {}
+    tag = (data.get("tag") or "").strip().lower()
+
+    if not tag:
+        return jsonify(generate_response(signature, "remove_tag_from_project", "fail", error="tag is required")), 400
+
+    try:
+        project = mongo.db.projects.find_one({"_id": ObjectId(project_id), "companyCode": company_code})
+        if not project:
+            return jsonify(generate_response(signature, "remove_tag_from_project", "fail", error="Project not found")), 404
+
+        mongo.db.projects.update_one(
+            {"_id": ObjectId(project_id)},
+            {"$pull": {"tags": tag}}
+        )
+        updated = mongo.db.projects.find_one({"_id": ObjectId(project_id)})
+        return jsonify(generate_response(signature, "remove_tag_from_project", "success", {
+            "projectId": project_id,
+            "tags": updated.get("tags", []),
+        })), 200
+    except Exception as e:
+        return jsonify(generate_response(signature, "remove_tag_from_project", "fail", error=str(e))), 500
+
+
+def get_projects_by_tag():
+    """GET /infrared/api/v1/projects/by-tag?tag=road"""
+    signature = "get_projects_by_tag"
+    company_code = request.headers.get("x-company-code")
+    tag = (request.args.get("tag") or "").strip().lower()
+
+    if not tag:
+        return jsonify(generate_response(signature, "get_projects_by_tag", "fail", error="tag query param is required")), 400
+
+    try:
+        cursor = mongo.db.projects.find(
+            {"companyCode": company_code, "tags": tag, "isActive": True}
+        ).sort("createdAt", -1)
+
+        projects = []
+        for p in cursor:
+            projects.append({
+                "id": str(p["_id"]),
+                "name": p.get("name", ""),
+                "status": p.get("status", ""),
+                "tags": p.get("tags", []),
+                "location": p.get("location", {}),
+                "projectType": p.get("projectType", ""),
+            })
+
+        return jsonify(generate_response(signature, "get_projects_by_tag", "success", {
+            "tag": tag,
+            "projects": projects,
+            "total": len(projects),
+        })), 200
+    except Exception as e:
+        return jsonify(generate_response(signature, "get_projects_by_tag", "fail", error=str(e))), 500
+
+
+def get_available_project_tags():
+    """GET /infrared/api/v1/projects/tags"""
+    signature = "get_available_project_tags"
+    company_code = request.headers.get("x-company-code")
+
+    try:
+        pipeline = [
+            {"$match": {"companyCode": company_code}},
+            {"$project": {"tags": {"$ifNull": ["$tags", []]}}},
+            {"$unwind": {"path": "$tags", "preserveNullAndEmptyArrays": False}},
+            {"$group": {"_id": None, "tags": {"$addToSet": "$tags"}}},
+        ]
+        result = list(mongo.db.projects.aggregate(pipeline))
+        existing_tags = sorted([str(tag).strip().lower() for tag in (result[0].get("tags", []) if result else []) if str(tag).strip()])
+
+        merged_tags = sorted(set(existing_tags + DEFAULT_PROJECT_TAGS))
+
+        return jsonify(generate_response(signature, "get_available_project_tags", "success", {
+            "tags": merged_tags,
+            "existingTags": existing_tags,
+            "defaultTags": DEFAULT_PROJECT_TAGS,
+        })), 200
+    except Exception as e:
+        return jsonify(generate_response(signature, "get_available_project_tags", "fail", error=str(e))), 500
+
+
+def bulk_add_tags_to_projects():
+    """POST /infrared/api/v1/projects/bulk-tags"""
+    signature = "bulk_add_tags_to_projects"
+    role = (request.user_role or "").lower()
+    if role not in ["owner", "admin"]:
+        return jsonify(generate_response(signature, "bulk_add_tags_to_projects", "fail", error="Only owner/admin can bulk update tags")), 403
+
+    company_code = request.headers.get("x-company-code")
+    data = request.get_json(silent=True) or {}
+    payload = data.get("payload", data)
+
+    project_ids = payload.get("projectIds", [])
+    tags = payload.get("tags", [])
+
+    if not project_ids or not isinstance(project_ids, list):
+        return jsonify(generate_response(signature, "bulk_add_tags_to_projects", "fail", error="projectIds must be a non-empty list")), 400
+
+    if not tags or not isinstance(tags, list):
+        return jsonify(generate_response(signature, "bulk_add_tags_to_projects", "fail", error="tags must be a non-empty list")), 400
+
+    invalid_ids = [pid for pid in project_ids if not ObjectId.is_valid(pid)]
+    if invalid_ids:
+        return jsonify(generate_response(signature, "bulk_add_tags_to_projects", "fail", error=f"Invalid project IDs: {invalid_ids}")), 400
+
+    normalized_tags = sorted(set([str(tag).strip().lower() for tag in tags if str(tag).strip()]))
+    if not normalized_tags:
+        return jsonify(generate_response(signature, "bulk_add_tags_to_projects", "fail", error="No valid tags provided")), 400
+
+    try:
+        object_ids = [ObjectId(pid) for pid in project_ids]
+        result = mongo.db.projects.update_many(
+            {"_id": {"$in": object_ids}, "companyCode": company_code},
+            {"$addToSet": {"tags": {"$each": normalized_tags}}},
+        )
+
+        updated_projects = list(mongo.db.projects.find(
+            {"_id": {"$in": object_ids}, "companyCode": company_code},
+            {"tags": 1}
+        ))
+        tags_by_project = {
+            str(project["_id"]): project.get("tags", [])
+            for project in updated_projects
+        }
+
+        return jsonify(generate_response(signature, "bulk_add_tags_to_projects", "success", {
+            "requestedCount": len(project_ids),
+            "matchedCount": result.matched_count,
+            "updatedCount": result.modified_count,
+            "tags": normalized_tags,
+            "projects": tags_by_project,
+        })), 200
+    except Exception as e:
+        return jsonify(generate_response(signature, "bulk_add_tags_to_projects", "fail", error=str(e))), 500
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FEATURE 13: Bulk Project Status Update
+# ─────────────────────────────────────────────────────────────────────────────
+
+VALID_PROJECT_STATUSES = ["Planned", "In Progress", "On Hold", "Completed", "Cancelled", "Under Review"]
+
+
+def bulk_update_project_status():
+    """POST /infrared/api/v1/projects/bulk-status"""
+    signature = "bulk_update_project_status"
+    role = (request.user_role or "").lower()
+    if role not in ["owner", "admin"]:
+        return jsonify(generate_response(signature, "bulk_update_project_status", "fail", error="Only owner/admin can bulk update")), 403
+
+    company_code = request.headers.get("x-company-code")
+    data = request.get_json(silent=True) or {}
+    payload = data.get("payload", data)
+
+    project_ids = payload.get("projectIds", [])
+    new_status = (payload.get("status") or "").strip()
+
+    if not project_ids or not isinstance(project_ids, list):
+        return jsonify(generate_response(signature, "bulk_update_project_status", "fail", error="projectIds must be a non-empty list")), 400
+
+    if new_status not in VALID_PROJECT_STATUSES:
+        return jsonify(generate_response(signature, "bulk_update_project_status", "fail",
+                                          error=f"Invalid status. Valid: {VALID_PROJECT_STATUSES}")), 400
+
+    invalid_ids = [pid for pid in project_ids if not ObjectId.is_valid(pid)]
+    if invalid_ids:
+        return jsonify(generate_response(signature, "bulk_update_project_status", "fail",
+                                          error=f"Invalid project IDs: {invalid_ids}")), 400
+
+    try:
+        object_ids = [ObjectId(pid) for pid in project_ids]
+        result = mongo.db.projects.update_many(
+            {"_id": {"$in": object_ids}, "companyCode": company_code},
+            {"$set": {"status": new_status}}
+        )
+
+        return jsonify(generate_response(signature, "bulk_update_project_status", "success", {
+            "newStatus": new_status,
+            "requestedCount": len(project_ids),
+            "updatedCount": result.modified_count,
+            "matchedCount": result.matched_count,
+        })), 200
+    except Exception as e:
+        return jsonify(generate_response(signature, "bulk_update_project_status", "fail", error=str(e))), 500

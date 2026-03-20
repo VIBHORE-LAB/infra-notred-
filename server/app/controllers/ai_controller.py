@@ -132,3 +132,92 @@ def simulate_project_impact():
         })), 200
     except Exception as e:
         return jsonify(generate_response(signature, "simulate_project_impact", "fail", error=str(e))), 500
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FEATURE 9: Milestone Progress Analytics
+# ─────────────────────────────────────────────────────────────────────────────
+
+def get_milestone_analytics(project_id):
+    """GET /infrared/api/v1/ai/milestones/<project_id>"""
+    from datetime import datetime
+    signature = "get_milestone_analytics"
+
+    if not ObjectId.is_valid(project_id):
+        return jsonify(generate_response(signature, "get_milestone_analytics", "fail", error="Invalid project ID")), 400
+
+    try:
+        milestones = list(mongo.db.milestones.find({"projectId": ObjectId(project_id)}))
+
+        if not milestones:
+            return jsonify(generate_response(signature, "get_milestone_analytics", "success", {
+                "projectId": project_id,
+                "totalMilestones": 0,
+                "message": "No milestones found for this project",
+            })), 200
+
+        now = datetime.utcnow()
+        total = len(milestones)
+        status_counts = {}
+        overdue = 0
+        completion_days = []
+        progress_values = []
+
+        for m in milestones:
+            status = m.get("status", "Planned")
+            status_counts[status] = status_counts.get(status, 0) + 1
+
+            progress_values.append(m.get("progress", 0))
+
+            end_date_raw = m.get("endDate")
+            created_at = m.get("createdAt", now)
+            last_updated = m.get("lastUpdatedAt", now)
+
+            # Check overdue: not completed and past end_date
+            if status not in ["Completed", "Cancelled"] and end_date_raw:
+                try:
+                    end_dt = datetime.fromisoformat(end_date_raw.replace("Z", "")) if isinstance(end_date_raw, str) else end_date_raw
+                    if end_dt < now:
+                        overdue += 1
+                except Exception:
+                    pass
+
+            # Average completion time for completed milestones
+            if status == "Completed":
+                try:
+                    start_raw = m.get("startDate")
+                    if start_raw and end_date_raw:
+                        start_dt = datetime.fromisoformat(start_raw.replace("Z", "")) if isinstance(start_raw, str) else start_raw
+                        end_dt = datetime.fromisoformat(end_date_raw.replace("Z", "")) if isinstance(end_date_raw, str) else end_date_raw
+                        days = (end_dt - start_dt).days
+                        if days >= 0:
+                            completion_days.append(days)
+                except Exception:
+                    pass
+
+        completed_count = status_counts.get("Completed", 0)
+        completion_rate = round((completed_count / total) * 100, 1)
+        avg_progress = round(sum(progress_values) / total, 1)
+        avg_completion_days = round(sum(completion_days) / len(completion_days), 1) if completion_days else None
+
+        # Simple burn-up projection: if we know avg days/milestone, estimate remaining
+        remaining = total - completed_count
+        projected_days_to_finish = (
+            round(remaining * avg_completion_days) if avg_completion_days and remaining > 0 else None
+        )
+
+        return jsonify(generate_response(signature, "get_milestone_analytics", "success", {
+            "projectId": project_id,
+            "totalMilestones": total,
+            "completionRate": completion_rate,
+            "averageProgress": avg_progress,
+            "overdueCount": overdue,
+            "completedCount": completed_count,
+            "remainingCount": remaining,
+            "statusBreakdown": status_counts,
+            "averageCompletionDays": avg_completion_days,
+            "projectedDaysToFinish": projected_days_to_finish,
+        })), 200
+
+    except Exception as e:
+        return jsonify(generate_response(signature, "get_milestone_analytics", "fail", error=str(e))), 500

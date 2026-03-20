@@ -20,7 +20,7 @@ def create_report():
             signature, "create_report", "fail", error="projectId, latitude, and longitude are required"
         )), 400
 
-    companyCode = request.headers.get("x-company-code")
+    companyCode = getattr(request, "company_code", None) or request.headers.get("x-company-code")
     if not companyCode:
          return jsonify(generate_response(
             signature, "create_report", "fail", error="Company code is missing"
@@ -93,7 +93,7 @@ def get_reports_by_project(project_id):
 
 def get_all_company_reports():
     signature = "get_all_company_reports"
-    company_code = request.headers.get("x-company-code")
+    company_code = getattr(request, "company_code", None) or request.headers.get("x-company-code")
     
     if not company_code:
         return jsonify(generate_response(signature, "get_all_company_reports", "fail", error="Company code required")), 400

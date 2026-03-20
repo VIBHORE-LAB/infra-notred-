@@ -259,3 +259,76 @@ def get_user_by_id(user_id):
             "companyId": str(user["companyId"]) if user.get("companyId") else None
         }
     })), 200
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FEATURE 11: User Profile Update & Avatar Upload
+# ─────────────────────────────────────────────────────────────────────────────
+
+def update_profile():
+    """PATCH /infrared/api/v1/user/profile — update name, phone, bio"""
+    signature = "update_profile"
+    user_id = request.user_id
+
+    data = request.get_json(silent=True) or {}
+    payload = data.get("payload", data)
+
+    allowed_fields = ["firstName", "lastName", "phone", "bio"]
+    updates = {k: v for k, v in payload.items() if k in allowed_fields and v is not None}
+
+    if not updates:
+        return jsonify(generate_response(signature, "update_profile", "fail", error="No valid fields provided to update")), 400
+
+    try:
+        mongo.db.users.update_one(
+            {"_id": ObjectId(user_id)},
+            {"$set": updates}
+        )
+        updated_user = mongo.db.users.find_one({"_id": ObjectId(user_id)})
+        return jsonify(generate_response(signature, "update_profile", "success", {
+            "user": {
+                "id": str(updated_user["_id"]),
+                "firstName": updated_user.get("firstName", ""),
+                "lastName": updated_user.get("lastName", ""),
+                "email": updated_user.get("email", ""),
+                "phone": updated_user.get("phone"),
+                "bio": updated_user.get("bio"),
+                "avatarUrl": updated_user.get("avatarUrl"),
+                "role": updated_user.get("role"),
+            }
+        })), 200
+    except Exception as e:
+        return jsonify(generate_response(signature, "update_profile", "fail", error=str(e))), 500
+
+
+def upload_avatar():
+    """POST /infrared/api/v1/user/avatar — upload avatar image to Cloudinary"""
+    import cloudinary
+    import cloudinary.uploader
+    signature = "upload_avatar"
+    user_id = request.user_id
+
+    file = request.files.get("avatar")
+    if not file or file.filename == "":
+        return jsonify(generate_response(signature, "upload_avatar", "fail", error="No avatar file provided")), 400
+
+    try:
+        file_bytes = file.read()
+        upload_result = cloudinary.uploader.upload(
+            file_bytes,
+            folder=f"users/{user_id}/avatar",
+            resource_type="image",
+            transformation=[{"width": 400, "height": 400, "crop": "fill", "gravity": "face"}],
+        )
+        avatar_url = upload_result.get("secure_url", "")
+
+        mongo.db.users.update_one(
+            {"_id": ObjectId(user_id)},
+            {"$set": {"avatarUrl": avatar_url}}
+        )
+
+        return jsonify(generate_response(signature, "upload_avatar", "success", {
+            "avatarUrl": avatar_url
+        })), 200
+    except Exception as e:
+        return jsonify(generate_response(signature, "upload_avatar", "fail", error=str(e))), 500

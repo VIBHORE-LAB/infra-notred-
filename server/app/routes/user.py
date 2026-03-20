@@ -9,11 +9,9 @@ def register_owner_route():
     return user.register_owner()
 
 
-@user_bp.route("/register/user",methods=["POST"])
+@user_bp.route("/register/user", methods=["POST"])
 def register_user_route():
     return user.register_user()
-
-
 
 
 @user_bp.route("/login", methods=["POST"])
@@ -21,7 +19,7 @@ def login_user_route():
     return user.login_user()
 
 @user_bp.route("/company-users", methods=["GET"])
-@Authenticator()    
+@Authenticator()
 def get_users_by_company_route():
     return user.get_users_by_company()
 
@@ -30,3 +28,16 @@ def get_users_by_company_route():
 @Authenticator()
 def get_user_by_id_route(user_id):
     return user.get_user_by_id(user_id)
+
+
+# Feature 11: User Profile Update & Avatar
+@user_bp.route("/profile", methods=["PATCH"])
+@Authenticator()
+def update_profile_route():
+    return user.update_profile()
+
+
+@user_bp.route("/avatar", methods=["POST"])
+@Authenticator()
+def upload_avatar_route():
+    return user.upload_avatar()

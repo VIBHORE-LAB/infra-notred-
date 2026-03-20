@@ -1,14 +1,13 @@
 import os
 import sys
-import importlib.util
 
-sys.path.append(os.path.dirname(__file__))  # ✅ Add path first
-spec = importlib.util.find_spec("app")
-print("[DEBUG] app is imported from:", spec.origin)
+# Ensure the server/ directory is on the path so `app` package resolves correctly
+sys.path.insert(0, os.path.dirname(__file__))
 
-from app import create_app  # ✅ Now Python can resolve this properly
+from app import create_app
 
 app = create_app()
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+    port = int(os.getenv("PORT", 8000))
+    app.run(debug=False, port=port)
