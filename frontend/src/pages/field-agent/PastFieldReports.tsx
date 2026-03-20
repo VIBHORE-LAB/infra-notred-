@@ -1,23 +1,30 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MenuItem, Typography } from '@mui/material';
-import TextInput from '../../components/TextInput';
-import Button from '../../components/Button';
-import { ProgressReport, useProgressReport } from '../../hooks/useProgressReport';
+import { toast } from 'sonner';
+import { useProgressReport } from '../../hooks/useProgressReport';
 import { Project, useProjects } from '../../hooks/useProjects';
 import { formatDate } from '../../helpers';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const PastFieldReports: React.FC = () => {
   const { fetchAllProjects, projects } = useProjects();
   const { getReportsByProject, getAllReports, reportsLoading, error } = useProgressReport();
-
-  const [selectedProjectId, setSelectedProjectId] = useState('');
-  const [reports, setReports] = useState<ProgressReport[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState('all');
+  const [reports, setReports] = useState<Awaited<ReturnType<typeof getAllReports>>>([]);
   const hasLoadedInitially = useRef(false);
 
   const projectNameById = useMemo(() => {
     const map = new Map<string, string>();
-    projects.forEach((p: Project) => map.set(p.id, p.name));
+    projects.forEach((project: Project) => map.set(project.id, project.name));
     return map;
   }, [projects]);
 
@@ -28,102 +35,108 @@ const PastFieldReports: React.FC = () => {
       setReports(all);
       hasLoadedInitially.current = true;
     };
-    init();
+    void init();
   }, [fetchAllProjects, getAllReports]);
 
   useEffect(() => {
     if (!hasLoadedInitially.current) return;
     const load = async () => {
-      const data = selectedProjectId ? await getReportsByProject(selectedProjectId) : await getAllReports();
+      const data = selectedProjectId !== 'all' ? await getReportsByProject(selectedProjectId) : await getAllReports();
       setReports(data);
     };
-    load();
+    void load();
   }, [selectedProjectId, getReportsByProject, getAllReports]);
 
-
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      <div className="app-surface p-6 md:p-8">
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div>
-            <Typography variant="h5" className="font-semibold text-slate-900 mb-2">
-              Past Field Reports
-            </Typography>
-            <p className="text-sm muted-text">
-              Historical site submissions across projects. Reports are loaded automatically.
-            </p>
+    <div className="page-grid mx-auto max-w-6xl">
+      <Card className="border-border/80">
+        <CardHeader className="gap-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <CardTitle>Past field reports</CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">Review submitted updates and site evidence across projects.</p>
+            </div>
+            <Button asChild variant="outline" className="rounded-xl">
+              <Link to="/field-agent/report">Submit a new report</Link>
+            </Button>
           </div>
-          <Link
-            to="/field-agent/report"
-            className="rounded-xl border border-[#0f5fa8] px-4 py-2 text-sm font-semibold text-[#0f5fa8] hover:bg-[#eef6ff]"
-          >
-            Back To Submit Report
-          </Link>
-        </div>
-      </div>
+        </CardHeader>
+      </Card>
 
-      <div className="app-surface p-6 md:p-8 space-y-5">
-        <TextInput
-          label="Filter by Project"
-          name="selectedProjectId"
-          value={selectedProjectId}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSelectedProjectId(e.target.value)}
-          select
-        >
-          <MenuItem value="">All Projects</MenuItem>
-          {projects.map((project: Project) => (
-            <MenuItem key={project.id} value={project.id}>
-              {project.name}
-            </MenuItem>
-          ))}
-        </TextInput>
-
-        {error && (
-          <Typography color="error" variant="body2" className="rounded-lg border border-red-200 bg-red-50 p-3">
-            {error}
-          </Typography>
-        )}
-
-        {reportsLoading ? (
-          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-6 text-sm text-slate-500 text-center">
-            Loading reports...
+      <Card className="border-border/80">
+        <CardContent className="space-y-6 p-6">
+          <div className="max-w-md space-y-2">
+            <Label>Filter by project</Label>
+            <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+              <SelectTrigger className="h-11 rounded-xl">
+                <SelectValue placeholder="All projects" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All projects</SelectItem>
+                {projects.map((project: Project) => (
+                  <SelectItem key={project.id} value={project.id}>
+                    {project.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        ) : reports.length === 0 ? (
-          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-6 text-sm text-slate-500 text-center">
-            No reports found.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {reports.map((report) => {
-              const projectName = report.projectName || projectNameById.get(report.projectId) || 'Unknown Project';
-              return (
-                <article key={report._id} className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-                  {report.images?.[0] ? (
-                    <img src={report.images[0]} alt="Report" className="h-44 w-full object-cover" />
-                  ) : (
-                    <div className="h-44 w-full bg-slate-100 flex items-center justify-center text-sm text-slate-400">No image</div>
-                  )}
-                  <div className="p-4 space-y-2">
-                    <p className="text-xs uppercase tracking-wide text-[#0f5fa8] font-semibold">{projectName}</p>
-                    <p className="text-sm font-semibold text-slate-800">{formatDate(report.timestamp, 'Unknown date')}</p>
-                    <p className="text-sm text-slate-700 line-clamp-3">{report.description || 'No remarks provided.'}</p>
-                    <p className="text-xs text-slate-500">
-                      Lat {Number(report.gpsCoordinates?.latitude ?? 0).toFixed(4)} | Lng {Number(report.gpsCoordinates?.longitude ?? 0).toFixed(4)}
-                    </p>
-                    <p className="text-xs text-slate-500">{report.images?.length ?? 0} image(s)</p>
+
+          {error && (
+            <div className="rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {error}
+            </div>
+          )}
+
+          {reportsLoading ? (
+            <div className="flex h-56 items-center justify-center">
+              <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
+            </div>
+          ) : reports.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border bg-muted/20 p-10 text-center text-sm text-muted-foreground">
+              No field reports found for this selection.
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {reports.map((report) => {
+                const projectName = report.projectName || projectNameById.get(report.projectId) || 'Unknown project';
+                return (
+                  <div key={report._id} className="overflow-hidden rounded-2xl border border-border/80 bg-card">
+                    {report.images?.[0] ? (
+                      <img src={report.images[0]} alt="Report" className="h-48 w-full object-cover" />
+                    ) : (
+                      <div className="flex h-48 items-center justify-center bg-muted/30 text-sm text-muted-foreground">No image evidence</div>
+                    )}
+                    <div className="space-y-3 p-4">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{projectName}</p>
+                        <p className="mt-1 text-sm font-semibold text-foreground">{formatDate(report.timestamp, 'Unknown date')}</p>
+                      </div>
+                      <p className="text-sm leading-6 text-muted-foreground">{report.description || 'No remarks provided.'}</p>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>Lat {Number(report.gpsCoordinates?.latitude ?? 0).toFixed(4)}</span>
+                        <span>Lng {Number(report.gpsCoordinates?.longitude ?? 0).toFixed(4)}</span>
+                      </div>
+                    </div>
                   </div>
-                </article>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
 
-        <div className="pt-2">
-          <Button type="button" variantType="outlined" onClick={async () => setReports(await getAllReports())} disabled={reportsLoading}>
-            Refresh Reports
+          <Button
+            variant="outline"
+            className="rounded-xl"
+            onClick={async () => {
+              setReports(await getAllReports());
+              toast.success('Reports refreshed.');
+            }}
+            disabled={reportsLoading}
+          >
+            Refresh
           </Button>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

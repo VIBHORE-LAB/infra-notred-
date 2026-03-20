@@ -1,147 +1,213 @@
 import React from 'react';
-import { Typography, Divider } from '@mui/material';
 import { Project } from '../hooks/useProjects';
 import { formatDate } from '../helpers';
+import { formatCurrency, riskToneClass, statusToneClass } from '@/lib/presentation';
 
 interface ProjectAuditReportProps {
-    project: Project;
-    milestones: any[];
-    updates: any[];
-    prediction: any;
-    runwayInfo: any;
+  project: Project;
+  milestones: Array<{
+    title: string;
+    progress?: number;
+  }>;
+  updates: Array<{
+    title: string;
+    description: string;
+    createdAt?: string;
+  }>;
+  prediction: {
+    riskLevel?: string;
+    confidenceScore?: number;
+    delayReasoning?: string;
+  } | null;
+  runwayInfo: {
+    daysLeft?: number;
+    exhaustedDate?: Date | null;
+  } | null;
 }
 
-const ProjectAuditReport: React.FC<ProjectAuditReportProps> = ({ project, milestones, updates, prediction, runwayInfo }) => {
-    return (
-        <div className="bg-white p-12 max-w-[800px] mx-auto border border-slate-200 shadow-2xl print:shadow-none print:border-none print:p-0">
-            {/* Report Header */}
-            <div className="flex justify-between items-start mb-10">
-                <div>
-                    <Typography variant="h4" className="font-bold text-slate-900 mb-1">PROJECT AUDIT REPORT</Typography>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">INFRA-INTELLIGENCE PORTAL • OFFICIAL DOCUMENT</p>
-                </div>
-                <div className="text-right">
-                    <p className="text-xs font-bold text-slate-900">{formatDate(new Date())}</p>
-                    <p className="text-[10px] text-slate-500">Report ID: AUDIT-{project.id?.slice(-6).toUpperCase()}</p>
-                </div>
-            </div>
+const ProjectAuditReport: React.FC<ProjectAuditReportProps> = ({
+  project,
+  milestones,
+  updates,
+  prediction,
+  runwayInfo,
+}) => {
+  const reportId = `AUDIT-${project.id?.slice(-6).toUpperCase()}`;
 
-            <Divider className="mb-8" />
-
-            {/* Project Summary */}
-            <section className="mb-10">
-                <Typography variant="h6" className="font-bold text-slate-900 mb-4 uppercase tracking-tight text-sm">I. Project Identification</Typography>
-                <div className="grid grid-cols-2 gap-y-4 text-sm">
-                    <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">Project Name</p>
-                        <p className="font-semibold text-slate-800">{project.name}</p>
-                    </div>
-                    <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">Location</p>
-                        <p className="font-semibold text-slate-800">{project.location?.city}, {project.location?.state}</p>
-                    </div>
-                    <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">Start Date</p>
-                        <p className="font-semibold text-slate-800">{formatDate(project.timeline?.startDate, 'Not Specified')}</p>
-                    </div>
-                    <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">Current Status</p>
-                        <p className="font-semibold text-slate-800">{project.status}</p>
-                    </div>
-                </div>
-            </section>
-
-            {/* Predictive Insights */}
-            <section className="mb-10 p-6 bg-slate-50 rounded-2xl border border-slate-100">
-                <Typography variant="h6" className="font-bold text-slate-900 mb-4 uppercase tracking-tight text-sm">II. Predictive Assessment</Typography>
-                <div className="grid grid-cols-2 gap-6 mb-6">
-                    <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Risk Level</p>
-                        <div className={`text-lg font-bold ${prediction?.riskLevel === 'High' ? 'text-rose-600' : 'text-emerald-600'}`}>
-                            {prediction?.riskLevel || 'LOW'} RISK
-                        </div>
-                    </div>
-                    <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Confidence Score</p>
-                        <p className="text-lg font-bold text-slate-800">{Math.round((prediction?.confidenceScore || 0) * 100)}%</p>
-                    </div>
-                </div>
-                <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Reasoning Summary</p>
-                    <p className="text-sm text-slate-700 leading-relaxed italic border-l-2 border-slate-200 pl-4">
-                        "{prediction?.delayReasoning || 'Project parameters remain within nominal thresholds. No significant schedule variance detected.'}"
-                    </p>
-                </div>
-            </section>
-
-            {/* Financial Status */}
-            <section className="mb-10">
-                <Typography variant="h6" className="font-bold text-slate-900 mb-4 uppercase tracking-tight text-sm">III. Financial Runway & Allocation</Typography>
-                <div className="grid grid-cols-3 gap-4 text-sm mb-6">
-                    <div className="p-3 border border-slate-100 rounded-xl">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">Allocated</p>
-                        <p className="font-bold text-slate-800">₹{project.funding?.estimatedBudget?.toLocaleString()}</p>
-                    </div>
-                    <div className="p-3 border border-slate-100 rounded-xl">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">Utilization</p>
-                        <p className="font-bold text-slate-800">{project.funding?.utilizationPercent}%</p>
-                    </div>
-                    <div className="p-3 border border-slate-100 rounded-xl">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">Runway</p>
-                        <p className="font-bold text-rose-600">{runwayInfo?.daysLeft || 'N/A'} Days</p>
-                    </div>
-                </div>
-                {runwayInfo?.exhaustedDate && (
-                    <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl text-center">
-                        <p className="text-[10px] font-bold text-rose-700 uppercase">Predicted Exhaustion Date</p>
-                        <p className="text-sm font-bold text-rose-800">{formatDate(runwayInfo.exhaustedDate)}</p>
-                    </div>
-                )}
-            </section>
-
-            {/* Recent Milestones */}
-            <section className="mb-10">
-                <Typography variant="h6" className="font-bold text-slate-900 mb-4 uppercase tracking-tight text-sm">IV. Recent Milestones</Typography>
-                <div className="space-y-3">
-                    {milestones.slice(0, 3).map((m, i) => (
-                        <div key={i} className="flex justify-between items-center text-sm p-2 border-b border-slate-50">
-                            <span className="text-slate-700 font-medium">{m.title}</span>
-                            <span className="font-bold text-slate-900">{m.progress}%</span>
-                        </div>
-                    ))}
-                </div>
-            </section>
-
-            {/* Project Updates */}
-            <section className="mb-10">
-                <Typography variant="h6" className="font-bold text-slate-900 mb-4 uppercase tracking-tight text-sm">V. Recent Project Updates</Typography>
-                <div className="space-y-4">
-                    {updates.slice(0, 3).map((u, i) => (
-                        <div key={i} className="text-sm">
-                            <div className="flex justify-between mb-1">
-                                <span className="font-bold text-slate-800">{u.title}</span>
-                                <span className="text-[10px] text-slate-500">{formatDate(u.createdAt)}</span>
-                            </div>
-                            <p className="text-xs text-slate-600 line-clamp-2">{u.description}</p>
-                        </div>
-                    ))}
-                    {updates.length === 0 && <p className="text-xs text-slate-400 italic">No formal updates recorded for this period.</p>}
-                </div>
-            </section>
-
-            {/* Footer */}
-            <div className="mt-20 pt-8 border-t border-slate-100 flex justify-between items-end">
-                <div className="max-w-[200px]">
-                    <div className="h-px bg-slate-300 w-full mb-2" />
-                    <p className="text-[10px] text-center text-slate-500 font-bold uppercase">Authorized Signatory</p>
-                </div>
-                <div className="text-right">
-                    <p className="text-[10px] text-slate-400 font-medium">Auto-generated by Infra-Intelligence Engine</p>
-                    <p className="text-[9px] text-slate-400">© 2026 Infrared Global. Proprietary & Confidential.</p>
-                </div>
-            </div>
+  return (
+    <div className="mx-auto max-w-4xl rounded-[28px] border border-border bg-card p-8 text-card-foreground shadow-[0_28px_90px_rgba(15,23,42,0.14)] print:max-w-none print:rounded-none print:border-none print:p-0 print:shadow-none">
+      <header className="flex flex-col gap-6 border-b border-border pb-8 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[0.28em] text-muted-foreground">
+            Delivery audit summary
+          </p>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
+            Project audit report
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+            Consolidated schedule, funding, and recent field activity for the selected project.
+          </p>
         </div>
-    );
+
+        <div className="soft-panel min-w-[220px]">
+          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Generated</p>
+          <p className="mt-2 text-sm font-medium text-foreground">{formatDate(new Date())}</p>
+          <p className="mt-3 text-xs uppercase tracking-[0.18em] text-muted-foreground">Report ID</p>
+          <p className="mt-2 text-sm font-medium text-foreground">{reportId}</p>
+        </div>
+      </header>
+
+      <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="metric-card">
+          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Project</p>
+          <p className="mt-2 font-semibold text-foreground">{project.name}</p>
+        </div>
+        <div className="metric-card">
+          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Location</p>
+          <p className="mt-2 font-semibold text-foreground">
+            {[project.location?.city, project.location?.state].filter(Boolean).join(', ') || 'Not specified'}
+          </p>
+        </div>
+        <div className="metric-card">
+          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Status</p>
+          <div className="mt-2">
+            <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] ${statusToneClass(project.status)}`}>
+              {project.status}
+            </span>
+          </div>
+        </div>
+        <div className="metric-card">
+          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Forecast tone</p>
+          <div className="mt-2">
+            <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] ${riskToneClass(prediction?.riskLevel)}`}>
+              {prediction?.riskLevel || 'Pending'}
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <div className="mt-8 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <section className="space-y-6">
+          <div className="page-section">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="section-title">Delivery outlook</h2>
+                <p className="section-copy mt-1">
+                  Current schedule pressure, confidence level, and operating context.
+                </p>
+              </div>
+              <span className={`rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] ${riskToneClass(prediction?.riskLevel)}`}>
+                {prediction?.riskLevel || 'Pending'}
+              </span>
+            </div>
+
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              <div className="soft-panel">
+                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Confidence</p>
+                <p className="mt-2 text-2xl font-semibold text-foreground">
+                  {Math.round((prediction?.confidenceScore || 0) * 100)}%
+                </p>
+              </div>
+              <div className="soft-panel">
+                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Runway</p>
+                <p className="mt-2 text-2xl font-semibold text-foreground">
+                  {runwayInfo?.daysLeft === Infinity ? 'Stable' : `${runwayInfo?.daysLeft ?? 'N/A'} days`}
+                </p>
+              </div>
+            </div>
+
+            <div className="soft-panel">
+              <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Summary</p>
+              <p className="mt-3 text-sm leading-7 text-foreground">
+                {prediction?.delayReasoning ||
+                  'The current project inputs do not yet provide a detailed forward-looking summary.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="page-section">
+            <h2 className="section-title">Recent milestones</h2>
+            <div className="mt-5 space-y-3">
+              {milestones.length > 0 ? (
+                milestones.slice(0, 4).map((milestone, index) => (
+                  <div key={`${milestone.title}-${index}`} className="flex items-center justify-between rounded-2xl border border-border/70 bg-muted/20 px-4 py-3">
+                    <span className="font-medium text-foreground">{milestone.title}</span>
+                    <span className="text-sm text-muted-foreground">{milestone.progress ?? 0}%</span>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
+                  No milestones were recorded for this report window.
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-6">
+          <div className="page-section">
+            <h2 className="section-title">Funding posture</h2>
+            <div className="mt-5 grid gap-4">
+              <div className="metric-card">
+                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Estimated budget</p>
+                <p className="mt-2 text-xl font-semibold text-foreground">
+                  {formatCurrency(project.funding?.estimatedBudget)}
+                </p>
+              </div>
+              <div className="metric-card">
+                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Utilization</p>
+                <p className="mt-2 text-xl font-semibold text-foreground">
+                  {project.funding?.utilizationPercent ?? 0}%
+                </p>
+              </div>
+              {runwayInfo?.exhaustedDate && (
+                <div className="rounded-2xl border border-[hsl(var(--status-danger))]/15 bg-[hsl(var(--status-danger-soft))] p-4 text-[hsl(var(--status-danger))]">
+                  <p className="text-xs uppercase tracking-[0.18em]">Estimated depletion</p>
+                  <p className="mt-2 text-base font-semibold">{formatDate(runwayInfo.exhaustedDate)}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="page-section">
+            <h2 className="section-title">Recent updates</h2>
+            <div className="mt-5 space-y-4">
+              {updates.length > 0 ? (
+                updates.slice(0, 4).map((update, index) => (
+                  <div key={`${update.title}-${index}`} className="rounded-2xl border border-border/70 bg-muted/20 p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <p className="font-medium text-foreground">{update.title}</p>
+                      <span className="text-xs text-muted-foreground">
+                        {formatDate(update.createdAt, 'No date')}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                      {update.description}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
+                  No formal updates were submitted during this period.
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <footer className="mt-10 flex flex-col gap-4 border-t border-border pt-6 text-xs text-muted-foreground sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="font-medium uppercase tracking-[0.18em] text-foreground">Prepared for review</p>
+          <p className="mt-1">Internal delivery workspace summary.</p>
+        </div>
+        <div className="text-left sm:text-right">
+          <p>Infra Not-Red audit stream</p>
+          <p className="mt-1">Confidential operational snapshot</p>
+        </div>
+      </footer>
+    </div>
+  );
 };
 
 export default ProjectAuditReport;

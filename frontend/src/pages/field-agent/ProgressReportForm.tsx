@@ -1,178 +1,146 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Typography, MenuItem } from '@mui/material';
-import TextInput from '../../components/TextInput';
-import Button from '../../components/Button';
+import React, { useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, ImagePlus, MapPinned } from 'lucide-react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useProgressReport } from '../../hooks/useProgressReport';
-import { Project, useProjects } from '../../hooks/useProjects';
 
 const ProgressReportForm: React.FC = () => {
-  const [projectId, setProjectId] = useState('');
+  const { projectId = '' } = useParams<{ projectId: string }>();
+  const navigate = useNavigate();
+  const { submitReport, submitLoading, error } = useProgressReport();
+  const [description, setDescription] = useState('');
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
-  const [description, setDescription] = useState('');
-  const [files, setFiles] = useState<FileList | null>(null);
-  const [gpsLoading, setGpsLoading] = useState(false);
-  const [gpsError, setGpsError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
-  const { fetchAllProjects, projects, loading: projectsLoading } = useProjects();
-  const { submitReport, submitLoading, error } = useProgressReport();
+  const fileCountLabel = useMemo(() => {
+    if (selectedFiles.length === 0) return 'No files selected';
+    if (selectedFiles.length === 1) return selectedFiles[0].name;
+    return `${selectedFiles.length} files selected`;
+  }, [selectedFiles]);
 
-  useEffect(() => {
-    fetchAllProjects();
-  }, [fetchAllProjects]);
-
-  const fillLocationFromDevice = () => {
-    if (!navigator.geolocation) {
-      setGpsError('Geolocation is not supported by your browser.');
+  const onSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!projectId) {
+      toast.error('This form needs a project id in the URL.');
       return;
     }
 
-    setGpsError('');
-    setGpsLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLatitude(position.coords.latitude.toString());
-        setLongitude(position.coords.longitude.toString());
-        setGpsLoading(false);
-      },
-      () => {
-        setGpsError('Unable to auto-detect GPS. You can fill latitude/longitude manually.');
-        setGpsLoading(false);
-      },
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 },
-    );
-  };
-
-  useEffect(() => {
-    fillLocationFromDevice();
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSuccessMessage('');
-
-    if (!projectId || !latitude || !longitude || !files || files.length === 0) {
-      alert('Please fill project, location, and attach at least one image.');
+    if (!description.trim() || !latitude || !longitude) {
+      toast.error('Fill in the description and coordinates first.');
       return;
     }
 
-    const result = await submitReport(projectId, latitude, longitude, description, files);
+    const result = await submitReport(projectId, latitude, longitude, description, selectedFiles);
     if (result) {
-      setSuccessMessage('Progress report submitted successfully.');
+      toast.success('Field report submitted.');
       setDescription('');
-      setFiles(null);
-      fillLocationFromDevice();
+      setLatitude('');
+      setLongitude('');
+      setSelectedFiles([]);
+      navigate(`/projects/${projectId}`);
+    } else {
+      toast.error('Unable to submit the report.');
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="app-surface p-6 md:p-8 space-y-6">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <Typography variant="h5" className="font-semibold text-slate-900 mb-2">
-              Field Progress Report
-            </Typography>
-            <p className="text-sm muted-text">
-              Submit geo-tagged evidence from the site and keep the project timeline updated.
-            </p>
-          </div>
-          <Link
-            to="/field-agent/reports"
-            className="rounded-xl border border-[#0f5fa8] px-4 py-2 text-sm font-semibold text-[#0f5fa8] hover:bg-[#eef6ff]"
-          >
-            View Past Reports
-          </Link>
+    <div className="mx-auto grid max-w-4xl gap-6">
+      <Button variant="outline" className="w-fit rounded-xl" onClick={() => navigate(-1)}>
+        <ArrowLeft className="h-4 w-4" />
+        Back
+      </Button>
+
+      <div className="page-section">
+        <div className="space-y-2">
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground">Submit field report</h2>
+          <p className="section-copy">
+            Add a short operational update, attach photo evidence, and capture the location coordinates from the site.
+          </p>
+        </div>
+      </div>
+
+      <form onSubmit={onSubmit} className="page-section space-y-6">
+        <div className="space-y-2">
+          <Label htmlFor="description">Site update</Label>
+          <Textarea
+            id="description"
+            placeholder="Describe progress, blockers, or observations from the site."
+            className="min-h-36 rounded-2xl"
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+          />
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="min-w-0 md:col-span-2">
-              <TextInput
-                label="Project"
-                name="projectId"
-                value={projectId}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setProjectId(e.target.value)}
-                select
-                helperText={projectsLoading ? 'Loading projects...' : 'Choose the project for this field report'}
-              >
-                {projects.map((project: Project) => (
-                  <MenuItem key={project.id} value={project.id}>
-                    {project.name} ({project.location?.city}, {project.location?.state})
-                  </MenuItem>
-                ))}
-              </TextInput>
-            </div>
-
-            <div className="min-w-0">
-              <TextInput
-                label="Latitude"
-                name="latitude"
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="latitude">Latitude</Label>
+            <div className="relative">
+              <MapPinned className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="latitude"
+                type="number"
+                step="any"
+                className="h-11 rounded-xl pl-10"
                 value={latitude}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLatitude(e.target.value)}
+                onChange={(event) => setLatitude(event.target.value)}
               />
             </div>
-            <div className="min-w-0">
-              <TextInput
-                label="Longitude"
-                name="longitude"
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="longitude">Longitude</Label>
+            <div className="relative">
+              <MapPinned className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="longitude"
+                type="number"
+                step="any"
+                className="h-11 rounded-xl pl-10"
                 value={longitude}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLongitude(e.target.value)}
+                onChange={(event) => setLongitude(event.target.value)}
               />
             </div>
           </div>
+        </div>
 
-          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs">
-            {gpsLoading ? (
-              <span className="text-slate-600">Detecting GPS from device...</span>
-            ) : gpsError ? (
-              <span className="text-amber-700">{gpsError}</span>
-            ) : (
-              <span className="text-emerald-700">GPS auto-filled from your current location.</span>
-            )}
-          </div>
-
-          <TextInput
-            label="Remarks / Observation"
-            name="description"
-            value={description}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDescription(e.target.value)}
-            multiline
-            minRows={4}
+        <div className="space-y-3">
+          <Label htmlFor="images">Photos</Label>
+          <label
+            htmlFor="images"
+            className="flex cursor-pointer items-center justify-between rounded-2xl border border-dashed border-border bg-muted/20 px-4 py-4 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:bg-accent/40"
+          >
+            <span>{fileCountLabel}</span>
+            <span className="inline-flex items-center gap-2 font-medium text-foreground">
+              <ImagePlus className="h-4 w-4" />
+              Choose files
+            </span>
+          </label>
+          <Input
+            id="images"
+            type="file"
+            multiple
+            className="hidden"
+            onChange={(event) => {
+              setSelectedFiles(Array.from(event.target.files ?? []));
+            }}
           />
+        </div>
 
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <Typography variant="body2" className="text-slate-700 font-semibold mb-2">
-              Site Images
-            </Typography>
-            <input
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={(e) => setFiles(e.target.files)}
-              className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#dff0ff] file:text-[#0f5fa8] hover:file:bg-[#cbe7ff]"
-            />
-            <p className="text-xs text-slate-500 mt-2">Upload one or more clear images from the current site visit.</p>
+        {error && (
+          <div className="rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            {error}
           </div>
+        )}
 
-          {successMessage && (
-            <Typography variant="body2" className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-emerald-800">
-              {successMessage}
-            </Typography>
-          )}
-          {error && (
-            <Typography color="error" variant="body2" className="rounded-lg border border-red-200 bg-red-50 p-3">
-              {error}
-            </Typography>
-          )}
-
-          <Button type="submit" variantType="primary" disabled={submitLoading}>
-            {submitLoading ? 'Uploading report...' : 'Submit Report'}
-          </Button>
-        </form>
-      </div>
+        <Button type="submit" disabled={submitLoading} className="rounded-xl">
+          {submitLoading ? 'Submitting…' : 'Submit report'}
+        </Button>
+      </form>
     </div>
   );
 };

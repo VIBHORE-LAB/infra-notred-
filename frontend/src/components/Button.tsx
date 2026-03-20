@@ -1,6 +1,5 @@
 import * as React from 'react';
-import { Button as MUIButton } from '@mui/material';
-import type { ButtonProps as MUIButtonProps } from '@mui/material';
+import { Button as ShadcnButton } from '@/components/ui/button';
 
 type VariantType =
   | 'primary'
@@ -11,40 +10,35 @@ type VariantType =
   | 'warning'
   | 'outlined';
 
-interface ButtonProps extends Omit<MUIButtonProps, 'color' | 'variant'> {
+interface ButtonProps extends React.ComponentProps<typeof ShadcnButton> {
   variantType?: VariantType;
   children: React.ReactNode;
 }
 
-const variantToColorMap: Record<VariantType, 'primary' | 'secondary' | 'success' | 'error' | 'info' | 'warning'> = {
-  primary: 'primary',
+const variantMap: Record<VariantType, React.ComponentProps<typeof ShadcnButton>['variant']> = {
+  primary: 'default',
   secondary: 'secondary',
-  success: 'success',
-  error: 'error',
-  info: 'info',
-  warning: 'warning',
-  outlined: 'primary', 
+  success: 'secondary',
+  error: 'destructive',
+  info: 'secondary',
+  warning: 'secondary',
+  outlined: 'outline',
 };
 
-const Button: React.FC<ButtonProps> = (props: ButtonProps) => {
-  const { variantType = 'primary', children, ...rest } = props;
-  const isOutlined = variantType === 'outlined';
-
+const Button: React.FC<ButtonProps> = ({
+  variantType = 'primary',
+  className,
+  children,
+  ...rest
+}) => {
   return (
-    <MUIButton
-      variant={isOutlined ? 'outlined' : 'contained'}
-      color={variantToColorMap[variantType]}
-      sx={{
-        borderRadius: '0.75rem',
-        textTransform: 'none',
-        fontWeight: 700,
-        minHeight: '44px',
-        boxShadow: isOutlined ? 'none' : '0 10px 20px rgba(15, 95, 168, 0.2)',
-      }}
+    <ShadcnButton
+      variant={variantMap[variantType]}
+      className={['rounded-xl', className].filter(Boolean).join(' ')}
       {...rest}
     >
       {children}
-    </MUIButton>
+    </ShadcnButton>
   );
 };
 

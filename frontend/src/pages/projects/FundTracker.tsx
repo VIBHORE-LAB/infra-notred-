@@ -1,10 +1,29 @@
 import React, { useEffect, useState } from 'react';
-import { Typography, MenuItem, Select, InputLabel, FormControl } from '@mui/material';
-import TextInput from '../../components/TextInput';
-import Button from '../../components/Button';
+import { toast } from 'sonner';
 import { useFunds } from '../../hooks/useFunds';
 import { useFinancialRunway } from '../../hooks/useFinancialRunway';
 import { formatDate } from '../../helpers';
+import { formatCurrency } from '@/lib/presentation';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 interface FundTrackerProps {
   projectId: string;
@@ -17,160 +36,161 @@ const FundTracker: React.FC<FundTrackerProps> = ({ projectId, estimatedBudget, s
   const [amount, setAmount] = useState('');
   const [purpose, setPurpose] = useState('');
   const [type, setType] = useState<'Credit' | 'Expenditure'>('Credit');
-  const [txSuccess, setTxSuccess] = useState(false);
+  const runwayInfo = useFinancialRunway(summary, startDate);
 
   useEffect(() => {
-    fetchFundSummary(projectId);
-    fetchTransactions(projectId);
+    void fetchFundSummary(projectId);
+    void fetchTransactions(projectId);
   }, [projectId, fetchFundSummary, fetchTransactions]);
 
   const handleAddTransaction = async () => {
-    if (!amount || !purpose) return;
-    setTxSuccess(false);
+    if (!amount || !purpose.trim()) {
+      toast.error('Add the amount and purpose first.');
+      return;
+    }
 
     const result = await createTransaction(projectId, type, parseFloat(amount), purpose);
     if (result) {
-      setTxSuccess(true);
+      toast.success('Transaction recorded.');
       setAmount('');
       setPurpose('');
-      fetchFundSummary(projectId);
-      fetchTransactions(projectId);
+      void fetchFundSummary(projectId);
+      void fetchTransactions(projectId);
+    } else {
+      toast.error('Unable to record the transaction.');
     }
   };
 
-  const utilPercent = summary?.utilization_percent ?? 0;
-  const barColor = utilPercent > 90 ? 'bg-rose-500' : utilPercent > 65 ? 'bg-amber-500' : 'bg-emerald-500';
-
-  const runwayInfo = useFinancialRunway(summary, startDate);
+  const utilization = summary?.utilization_percent ?? 0;
 
   return (
-    <section className="app-surface p-6 md:p-8 space-y-6">
-      <div className="flex justify-between items-center">
-        <Typography variant="h6" className="font-semibold text-slate-900">
-          Fund Allocation and Tracking
-        </Typography>
-        {runwayInfo && runwayInfo.daysLeft !== Infinity && (
-          <div className={`px-3 py-1.5 rounded-xl border flex items-center gap-2 ${runwayInfo.daysLeft < 30 ? 'bg-rose-50 border-rose-100' : 'bg-indigo-50 border-indigo-100'}`}>
-            <span className="relative flex h-2 w-2">
-              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${runwayInfo.daysLeft < 30 ? 'bg-rose-400' : 'bg-indigo-400'}`}></span>
-              <span className={`relative inline-flex rounded-full h-2 w-2 ${runwayInfo.daysLeft < 30 ? 'bg-rose-500' : 'bg-indigo-500'}`}></span>
-            </span>
-            <span className={`text-[10px] font-bold uppercase tracking-wider ${runwayInfo.daysLeft < 30 ? 'text-rose-700' : 'text-indigo-700'}`}>
-              Financial Runway: {runwayInfo.daysLeft} Days left
-            </span>
+    <div className="page-grid">
+      <Card className="border-border/80">
+        <CardHeader>
+          <CardTitle>Funding overview</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {estimatedBudget !== undefined && (
+            <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Estimated budget</p>
+              <p className="mt-2 text-xl font-semibold text-foreground">{formatCurrency(estimatedBudget)}</p>
+            </div>
+          )}
+          <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Allocated</p>
+            <p className="mt-2 text-xl font-semibold text-foreground">{formatCurrency(summary?.Credit)}</p>
           </div>
-        )}
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {estimatedBudget && (
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-center">
-            <div className="text-xl font-bold text-slate-900">₹{estimatedBudget.toLocaleString()}</div>
-            <div className="text-xs text-slate-500 mt-1">Estimated Budget</div>
+          <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Spent</p>
+            <p className="mt-2 text-xl font-semibold text-foreground">{formatCurrency(summary?.Expenditure)}</p>
           </div>
-        )}
-        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-center">
-          <div className="text-xl font-bold text-blue-800">₹{(summary?.Credit ?? 0).toLocaleString()}</div>
-          <div className="text-xs text-blue-700 mt-1">Total Allocated</div>
-        </div>
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-center">
-          <div className="text-xl font-bold text-amber-800">₹{(summary?.Expenditure ?? 0).toLocaleString()}</div>
-          <div className="text-xs text-amber-700 mt-1">Total Spent</div>
-        </div>
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-center">
-          <div className="text-xl font-bold text-emerald-800">{utilPercent}%</div>
-          <div className="text-xs text-emerald-700 mt-1">Utilization</div>
-        </div>
-      </div>
-
-      {runwayInfo && runwayInfo.exhaustedDate && (
-        <div className="p-4 rounded-2xl bg-slate-900 text-white flex items-center justify-between gap-4 overflow-hidden relative">
-          <div className="relative z-10">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Predictive Fund Exhaustion</p>
-            <p className="text-lg font-semibold italic">"{runwayInfo.daysLeft < 60 ? 'Immediate capital injection advised.' : 'Spending velocity remains within nominal bounds.'}"</p>
+          <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Utilization</p>
+            <p className="mt-2 text-xl font-semibold text-foreground">{utilization}%</p>
           </div>
-          <div className="text-right relative z-10">
-            <p className="text-3xl font-bold text-emerald-400">{formatDate(runwayInfo.exhaustedDate)}</p>
-            <p className="text-[10px] font-medium text-slate-400">Zero-Balance Forecast</p>
-          </div>
-          <div className="absolute right-0 top-0 h-full w-1/2 bg-gradient-to-l from-[#0f5fa8]/20 to-transparent pointer-events-none"></div>
-        </div>
-      )}
+        </CardContent>
+      </Card>
 
-      <div>
-        <div className="flex justify-between text-xs text-slate-500 mb-1">
-          <span>Utilization Progress</span>
-          <span>{utilPercent}%</span>
-        </div>
-        <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
-          <div className={`${barColor} h-2.5 transition-all duration-500`} style={{ width: `${Math.min(utilPercent, 100)}%` }}></div>
-        </div>
-      </div>
+      <Card className="border-border/80">
+        <CardHeader>
+          <CardTitle>Runway and new transaction</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-6 xl:grid-cols-[0.75fr_1.25fr]">
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Runway</p>
+              <p className="mt-2 text-sm text-foreground">
+                {runwayInfo && runwayInfo.daysLeft !== Infinity
+                  ? `${runwayInfo.daysLeft} days remaining`
+                  : 'Runway unavailable'}
+              </p>
+              {runwayInfo?.exhaustedDate && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Estimated depletion date: {formatDate(runwayInfo.exhaustedDate)}
+                </p>
+              )}
+            </div>
 
-      <div className="border-t border-slate-100 pt-5">
-        <Typography variant="subtitle2" className="font-semibold text-slate-700 mb-3">
-          Record Transaction
-        </Typography>
-        {txSuccess && <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 p-2 text-sm text-emerald-800">Transaction recorded successfully.</div>}
-        {error && <div className="mb-3 rounded-lg border border-red-200 bg-red-50 p-2 text-sm text-red-800">{error}</div>}
-
-        <div className="flex gap-3 flex-wrap items-center">
-          <FormControl size="small" sx={{ minWidth: 160 }}>
-            <InputLabel>Type</InputLabel>
-            <Select value={type} label="Type" onChange={(e) => setType(e.target.value as 'Credit' | 'Expenditure')}>
-              <MenuItem value="Credit">Credit</MenuItem>
-              <MenuItem value="Expenditure">Expenditure</MenuItem>
-            </Select>
-          </FormControl>
-
-          <div className="min-w-52">
-            <TextInput label="Amount (INR)" name="amount" type="number" value={amount} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAmount(e.target.value)} />
-          </div>
-          <div className="min-w-72 flex-1">
-            <TextInput label="Purpose" name="purpose" value={purpose} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPurpose(e.target.value)} />
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Utilization</span>
+                <span>{utilization}%</span>
+              </div>
+              <Progress value={utilization} className="h-2" />
+            </div>
           </div>
 
-          <Button onClick={handleAddTransaction} variantType="primary" disabled={loading}>
-            {loading ? 'Saving...' : 'Add Transaction'}
-          </Button>
-        </div>
-      </div>
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-2">
+                <Label>Type</Label>
+                <Select value={type} onValueChange={(value) => setType(value as 'Credit' | 'Expenditure')}>
+                  <SelectTrigger className="h-11 rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Credit">Credit</SelectItem>
+                    <SelectItem value="Expenditure">Expenditure</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Amount</Label>
+                <Input type="number" value={amount} onChange={(event) => setAmount(event.target.value)} className="h-11 rounded-xl" />
+              </div>
+              <div className="space-y-2 sm:col-span-1">
+                <Label>Purpose</Label>
+                <Input value={purpose} onChange={(event) => setPurpose(event.target.value)} className="h-11 rounded-xl" />
+              </div>
+            </div>
 
-      {transactions.length > 0 && (
-        <div className="overflow-x-auto">
-          <Typography variant="subtitle2" className="font-semibold text-slate-700 mb-3">
-            Transaction History
-          </Typography>
-          <table className="min-w-full text-sm border border-slate-200 rounded-xl overflow-hidden">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="py-2 px-3 text-left text-slate-600">Date</th>
-                <th className="py-2 px-3 text-left text-slate-600">Type</th>
-                <th className="py-2 px-3 text-left text-slate-600">Amount</th>
-                <th className="py-2 px-3 text-left text-slate-600">Purpose</th>
-              </tr>
-            </thead>
-            <tbody>
-              {transactions.map((txn) => (
-                <tr key={txn.id} className="border-t border-slate-100 hover:bg-slate-50">
-                  <td className="py-2 px-3 text-slate-700">{formatDate(txn.date)}</td>
-                  <td className="py-2 px-3">
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-xs font-medium ${txn.type === 'Credit' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
-                        }`}
-                    >
-                      {txn.type}
-                    </span>
-                  </td>
-                  <td className="py-2 px-3 font-semibold text-slate-900">₹{txn.amount.toLocaleString()}</td>
-                  <td className="py-2 px-3 text-slate-700">{txn.purpose}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </section>
+            {error && (
+              <div className="rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                {error}
+              </div>
+            )}
+
+            <Button onClick={handleAddTransaction} disabled={loading} className="rounded-xl">
+              {loading ? 'Saving…' : 'Add transaction'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/80">
+        <CardHeader>
+          <CardTitle>Transaction history</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {transactions.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border bg-muted/20 p-8 text-sm text-muted-foreground">
+              No transactions have been recorded yet.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Purpose</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {transactions.map((transaction) => (
+                  <TableRow key={transaction.id}>
+                    <TableCell>{formatDate(transaction.date)}</TableCell>
+                    <TableCell>{transaction.type}</TableCell>
+                    <TableCell>{formatCurrency(transaction.amount)}</TableCell>
+                    <TableCell>{transaction.purpose}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

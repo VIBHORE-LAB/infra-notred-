@@ -1,243 +1,230 @@
-import React, { useState } from 'react';
-import { Typography, MenuItem } from '@mui/material';
-import TextInput from '../../components/TextInput';
-import Button from '../../components/Button';
-import { useProjects } from '../../hooks/useProjects';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
+import { toast } from 'sonner';
+import instance from '../../api/api';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
-const PROJECT_STATUSES = ['Planned', 'In Progress', 'On Hold', 'Completed'];
-const PROJECT_TYPES = ['Road', 'Bridge', 'Building', 'Water Supply', 'Electricity', 'Other'];
+interface CreateProjectFormData {
+  name: string;
+  description: string;
+  projectType: string;
+  status: string;
+  location: {
+    city: string;
+    state: string;
+    country: string;
+    zipCode: string;
+    areaInSqFt: number;
+  };
+  timeline: {
+    startDate: string;
+    endDate: string;
+    deadline: string;
+  };
+  funding: {
+    estimatedBudget: number;
+    fundingSource: string;
+  };
+}
 
 const CreateProject: React.FC = () => {
-  const { createProject, loading, error } = useProjects();
-  const [form, setForm] = useState({
+  const navigate = useNavigate();
+  const [loading, setLoading] = React.useState(false);
+  const [formData, setFormData] = React.useState<CreateProjectFormData>({
     name: '',
     description: '',
-    estimatedBudget: '',
-    fundingSource: '',
-    startDate: '',
-    endDate: '',
-    deadline: '',
-    status: 'Planned',
     projectType: 'Road',
-    city: '',
-    state: '',
-    country: '',
-    zipCode: '',
-    areaInSqFt: '',
-    teamsize: '',
+    status: 'Planned',
+    location: { city: '', state: '', country: 'India', zipCode: '000000', areaInSqFt: 1000 },
+    funding: { estimatedBudget: 0, fundingSource: 'Government' },
+    timeline: { startDate: '', endDate: '', deadline: new Date().toISOString().split('T')[0] },
   });
-  const [success, setSuccess] = useState(false);
 
-  const handleChange = (field: string, value: string) => setForm((prev) => ({ ...prev, [field]: value }));
+  const updateLocation = (field: keyof CreateProjectFormData['location'], value: string | number) => {
+    setFormData((prev) => ({ ...prev, location: { ...prev.location, [field]: value } }));
+  };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSuccess(false);
+  const updateFunding = (field: keyof CreateProjectFormData['funding'], value: string | number) => {
+    setFormData((prev) => ({ ...prev, funding: { ...prev.funding, [field]: value } }));
+  };
 
-    const payload = {
-      ...form,
-      estimatedBudget: parseFloat(form.estimatedBudget),
-      areaInSqFt: parseFloat(form.areaInSqFt),
-      teamsize: parseInt(form.teamsize, 10),
-    };
+  const updateTimeline = (field: keyof CreateProjectFormData['timeline'], value: string) => {
+    setFormData((prev) => ({ ...prev, timeline: { ...prev.timeline, [field]: value } }));
+  };
 
-    const result = await createProject(payload);
-    if (result) {
-      setSuccess(true);
-      setForm({
-        name: '',
-        description: '',
-        estimatedBudget: '',
-        fundingSource: '',
-        startDate: '',
-        endDate: '',
-        deadline: '',
-        status: 'Planned',
-        projectType: 'Road',
-        city: '',
-        state: '',
-        country: '',
-        zipCode: '',
-        areaInSqFt: '',
-        teamsize: '',
+  const onSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!formData.name.trim() || !formData.description.trim() || !formData.location.city.trim() || !formData.location.state.trim()) {
+      toast.error('Fill in the main project details first.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const payload = {
+        name: formData.name,
+        description: formData.description,
+        projectType: formData.projectType,
+        status: formData.status,
+        city: formData.location.city,
+        state: formData.location.state,
+        country: formData.location.country,
+        zipCode: formData.location.zipCode,
+        areaInSqFt: Number(formData.location.areaInSqFt),
+        startDate: formData.timeline.startDate,
+        endDate: formData.timeline.endDate,
+        deadline: formData.timeline.deadline,
+        estimatedBudget: Number(formData.funding.estimatedBudget),
+        fundingSource: formData.funding.fundingSource,
+      };
+
+      await instance.post('/projects/create', {
+        req: { signature: 'create_project' },
+        payload,
       });
+
+      toast.success('Project created.');
+      navigate('/dashboard');
+    } catch {
+      toast.error('Unable to create the project.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="app-surface p-6 md:p-8 max-w-4xl mx-auto">
-      <Typography variant="h5" className="font-semibold text-slate-900 mb-2">
-        New Infrastructure Project
-      </Typography>
-      <p className="text-sm muted-text mb-6">All fields are aligned in one uniform form for easy input.</p>
+    <div className="mx-auto grid max-w-5xl gap-6">
+      <Button variant="outline" className="w-fit rounded-xl" onClick={() => navigate(-1)}>
+        <ArrowLeft className="h-4 w-4" />
+        Back
+      </Button>
 
-      {success && <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-800">Project created successfully.</div>}
-      {error && <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-red-800">{error}</div>}
+      <div className="page-section">
+        <div className="space-y-2">
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground">Create project</h2>
+          <p className="section-copy">
+            Add the core scope, schedule, budget, and location details. The rest of the workspace will build from this record.
+          </p>
+        </div>
+      </div>
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div className="min-w-0 md:col-span-2">
-          <TextInput
-            label="Project Name"
-            name="name"
-            value={form.name}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange('name', e.target.value)}
-          />
+      <form onSubmit={onSubmit} className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="page-section space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="name">Project name</Label>
+            <Input id="name" className="h-11 rounded-xl" value={formData.name} onChange={(event) => setFormData((prev) => ({ ...prev, name: event.target.value }))} />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              className="min-h-40 rounded-2xl"
+              value={formData.description}
+              onChange={(event) => setFormData((prev) => ({ ...prev, description: event.target.value }))}
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Project type</Label>
+              <Select onValueChange={(value) => setFormData((prev) => ({ ...prev, projectType: value }))} defaultValue={formData.projectType}>
+                <SelectTrigger className="h-11 rounded-xl">
+                  <SelectValue placeholder="Choose type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Road">Road</SelectItem>
+                  <SelectItem value="Bridge">Bridge</SelectItem>
+                  <SelectItem value="Building">Building</SelectItem>
+                  <SelectItem value="Water">Water</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select onValueChange={(value) => setFormData((prev) => ({ ...prev, status: value }))} defaultValue={formData.status}>
+                <SelectTrigger className="h-11 rounded-xl">
+                  <SelectValue placeholder="Choose status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Planned">Planned</SelectItem>
+                  <SelectItem value="In Progress">In progress</SelectItem>
+                  <SelectItem value="On Hold">On hold</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
 
-        <div className="min-w-0 md:col-span-2">
-          <TextInput
-            label="Description"
-            name="description"
-            value={form.description}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange('description', e.target.value)}
-            multiline
-            minRows={3}
-          />
-        </div>
+        <div className="space-y-6">
+          <div className="page-section space-y-4">
+            <h3 className="section-title">Location</h3>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>City</Label>
+                <Input className="h-11 rounded-xl" value={formData.location.city} onChange={(event) => updateLocation('city', event.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>State</Label>
+                <Input className="h-11 rounded-xl" value={formData.location.state} onChange={(event) => updateLocation('state', event.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Country</Label>
+                <Input className="h-11 rounded-xl" value={formData.location.country} onChange={(event) => updateLocation('country', event.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Zip code</Label>
+                <Input className="h-11 rounded-xl" value={formData.location.zipCode} onChange={(event) => updateLocation('zipCode', event.target.value)} />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Area in sq ft</Label>
+                <Input type="number" className="h-11 rounded-xl" value={formData.location.areaInSqFt} onChange={(event) => updateLocation('areaInSqFt', Number(event.target.value))} />
+              </div>
+            </div>
+          </div>
 
-        <div className="min-w-0">
-          <TextInput
-            label="Funding Source"
-            name="fundingSource"
-            value={form.fundingSource}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange('fundingSource', e.target.value)}
-          />
-        </div>
+          <div className="page-section space-y-4">
+            <h3 className="section-title">Funding and timeline</h3>
+            <div className="space-y-2">
+              <Label>Estimated budget</Label>
+              <Input type="number" className="h-11 rounded-xl" value={formData.funding.estimatedBudget} onChange={(event) => updateFunding('estimatedBudget', Number(event.target.value))} />
+            </div>
+            <div className="space-y-2">
+              <Label>Funding source</Label>
+              <Input className="h-11 rounded-xl" value={formData.funding.fundingSource} onChange={(event) => updateFunding('fundingSource', event.target.value)} />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-2">
+                <Label>Start date</Label>
+                <Input type="date" className="h-11 rounded-xl" value={formData.timeline.startDate} onChange={(event) => updateTimeline('startDate', event.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>End date</Label>
+                <Input type="date" className="h-11 rounded-xl" value={formData.timeline.endDate} onChange={(event) => updateTimeline('endDate', event.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Deadline</Label>
+                <Input type="date" className="h-11 rounded-xl" value={formData.timeline.deadline} onChange={(event) => updateTimeline('deadline', event.target.value)} />
+              </div>
+            </div>
+          </div>
 
-        <div className="min-w-0">
-          <TextInput
-            label="Estimated Budget (INR)"
-            name="estimatedBudget"
-            type="number"
-            value={form.estimatedBudget}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange('estimatedBudget', e.target.value)}
-          />
-        </div>
-
-        <div className="min-w-0">
-          <TextInput
-            label="Team Size"
-            name="teamsize"
-            type="number"
-            value={form.teamsize}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange('teamsize', e.target.value)}
-          />
-        </div>
-
-        <div className="min-w-0">
-          <TextInput
-            label="Start Date"
-            name="startDate"
-            type="date"
-            value={form.startDate}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange('startDate', e.target.value)}
-            InputLabelProps={{ shrink: true }}
-          />
-        </div>
-
-        <div className="min-w-0">
-          <TextInput
-            label="End Date"
-            name="endDate"
-            type="date"
-            value={form.endDate}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange('endDate', e.target.value)}
-            InputLabelProps={{ shrink: true }}
-          />
-        </div>
-
-        <div className="min-w-0">
-          <TextInput
-            label="Delivery Deadline"
-            name="deadline"
-            type="date"
-            value={form.deadline}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange('deadline', e.target.value)}
-            InputLabelProps={{ shrink: true }}
-          />
-        </div>
-
-        <div className="min-w-0">
-          <TextInput
-            label="Status"
-            name="status"
-            value={form.status}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange('status', e.target.value)}
-            select
-          >
-            {PROJECT_STATUSES.map((status) => (
-              <MenuItem key={status} value={status}>
-                {status}
-              </MenuItem>
-            ))}
-          </TextInput>
-        </div>
-
-        <div className="min-w-0">
-          <TextInput
-            label="Project Type"
-            name="projectType"
-            value={form.projectType}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange('projectType', e.target.value)}
-            select
-          >
-            {PROJECT_TYPES.map((type) => (
-              <MenuItem key={type} value={type}>
-                {type}
-              </MenuItem>
-            ))}
-          </TextInput>
-        </div>
-
-        <div className="min-w-0">
-          <TextInput
-            label="City"
-            name="city"
-            value={form.city}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange('city', e.target.value)}
-          />
-        </div>
-
-        <div className="min-w-0">
-          <TextInput
-            label="State"
-            name="state"
-            value={form.state}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange('state', e.target.value)}
-          />
-        </div>
-
-        <div className="min-w-0">
-          <TextInput
-            label="Country"
-            name="country"
-            value={form.country}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange('country', e.target.value)}
-          />
-        </div>
-
-        <div className="min-w-0">
-          <TextInput
-            label="Zip Code"
-            name="zipCode"
-            value={form.zipCode}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange('zipCode', e.target.value)}
-          />
-        </div>
-
-        <div className="min-w-0 md:col-span-2">
-          <TextInput
-            label="Site Area (sq ft)"
-            name="areaInSqFt"
-            type="number"
-            value={form.areaInSqFt}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange('areaInSqFt', e.target.value)}
-          />
-        </div>
-
-        <div className="pt-2 md:col-span-2">
-          <Button type="submit" variantType="primary" disabled={loading} fullWidth>
-            {loading ? 'Creating project...' : 'Create Project'}
+          <Button type="submit" disabled={loading} className="w-full rounded-xl">
+            {loading ? 'Creating…' : 'Create project'}
           </Button>
         </div>
       </form>

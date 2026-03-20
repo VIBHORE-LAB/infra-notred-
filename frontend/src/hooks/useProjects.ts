@@ -29,7 +29,9 @@ export interface Project {
   };
   projectType?: string;
   teamsize: number;
-  companyCode: string;
+  companyCode?: string;
+  users?: Array<{ id?: string; role?: string; name?: string }>;
+  tags?: string[];
 }
 
 const COMPANY_CODE_KEY = "companyCode";
@@ -41,6 +43,7 @@ function getHeaders() {
 
 export const useProjects = () => {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -115,5 +118,130 @@ export const useProjects = () => {
     }
   }, []);
 
-  return { projects, setProjects, loading, error, fetchProject, fetchAllProjects, createProject, addAdmin };
+  const addTags = useCallback(async (projectId: string, tags: string[]) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await instance.post(`/projects/${projectId}/tags`, { tags }, { headers: getHeaders() });
+      return res.data?.data?.tags as string[];
+    } catch (err: any) {
+      setError(err.response?.data?.error ?? "Failed to add tags");
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const removeTag = useCallback(async (projectId: string, tag: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await instance.delete(`/projects/${projectId}/tags`, {
+        headers: getHeaders(),
+        data: { tag },
+      });
+      return res.data?.data?.tags as string[];
+    } catch (err: any) {
+      setError(err.response?.data?.error ?? "Failed to remove tag");
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchProjectsByTag = useCallback(async (tag: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await instance.get(`/projects/by-tag`, {
+        headers: getHeaders(),
+        params: { tag },
+      });
+      return (res.data?.data?.projects ?? []) as Project[];
+    } catch (err: any) {
+      setError(err.response?.data?.error ?? "Failed to fetch projects by tag");
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchAvailableTags = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await instance.get(`/projects/tags`, { headers: getHeaders() });
+      const tags = (res.data?.data?.tags ?? []) as string[];
+      setAvailableTags(tags);
+      return tags;
+    } catch (err: any) {
+      setError(err.response?.data?.error ?? "Failed to fetch available tags");
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const bulkAddTags = useCallback(async (projectIds: string[], tags: string[]) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await instance.post(
+        `/projects/bulk-tags`,
+        { payload: { projectIds, tags } },
+        { headers: getHeaders() }
+      );
+      return res.data?.data as {
+        updatedCount: number;
+        matchedCount: number;
+        tags: string[];
+        projects: Record<string, string[]>;
+      };
+    } catch (err: any) {
+      setError(err.response?.data?.error ?? "Failed to update project tags");
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const bulkUpdateStatus = useCallback(async (projectIds: string[], status: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await instance.post(
+        `/projects/bulk-status`,
+        { payload: { projectIds, status } },
+        { headers: getHeaders() }
+      );
+      return res.data?.data as {
+        updatedCount: number;
+        matchedCount: number;
+        newStatus: string;
+      };
+    } catch (err: any) {
+      setError(err.response?.data?.error ?? "Failed to update project statuses");
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return {
+    projects,
+    setProjects,
+    availableTags,
+    loading,
+    error,
+    fetchProject,
+    fetchAllProjects,
+    createProject,
+    addAdmin,
+    addTags,
+    removeTag,
+    fetchAvailableTags,
+    fetchProjectsByTag,
+    bulkAddTags,
+    bulkUpdateStatus,
+  };
 };

@@ -1,56 +1,57 @@
-import React, { useState, useEffect } from 'react';
-import { Typography } from '@mui/material';
-import AutoGraphIcon from '@mui/icons-material/AutoGraph';
-import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import React, { useEffect, useState } from 'react';
+import { BellDot, Dot } from 'lucide-react';
 
 const INSIGHTS = [
-    "AI detect unusual labor density drop in NH-48 sector. Investigating schedule variance.",
-    "Hydropower Project Alpha showing 12% faster material consumption than predicted. Efficiency gain detected.",
-    "Bridges Zone B: Burn rate anomaly. Projected fund exhaustion shifted 4 days earlier.",
-    "Intelligence Model V4 updated. Prediction confidence increased to 94% across Portfolio.",
-    "Environmental risk weights adjusted for monsoon season in North India projects.",
-    "Smart Allocation recommendation: Shift 5 laborers from 'On-Track' Green Park to 'Delayed' NH-48.",
-    "Predictive Heuristics detect possible logistics bottleneck at Mundra Port for Solar Farm units."
+  'Labor coverage dipped in NH-48 and needs a supervisor check-in.',
+  'Hydropower Project Alpha is consuming materials faster than planned.',
+  'Bridge Zone B funding runway moved four days earlier after the last expense cycle.',
+  'Monsoon weighting is now reflected in the latest delivery forecasts.',
+  'A logistics bottleneck is likely for the next solar shipment window.',
 ];
 
 const RiskTicker: React.FC = () => {
-    const [index, setIndex] = useState(0);
-    const [fade, setFade] = useState(true);
+  const [index, setIndex] = useState(0);
+  const [visible, setVisible] = useState(true);
 
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setFade(false);
-            setTimeout(() => {
-                setIndex((prev) => (prev + 1) % INSIGHTS.length);
-                setFade(true);
-            }, 500);
-        }, 6000);
-        return () => clearInterval(interval);
-    }, []);
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setVisible(false);
+      window.setTimeout(() => {
+        setIndex((prev) => (prev + 1) % INSIGHTS.length);
+        setVisible(true);
+      }, 180);
+    }, 4200);
 
-    return (
-        <div className="bg-slate-900 text-white py-3 px-6 rounded-2xl flex items-center gap-4 overflow-hidden shadow-2xl shadow-blue-900/20 border border-slate-800">
-            <div className="flex items-center gap-2 whitespace-nowrap border-r border-slate-700 pr-4">
-                <AutoGraphIcon className="text-blue-400 text-sm" />
-                <Typography className="text-[10px] font-bold uppercase tracking-widest text-blue-400">Live AI Feed</Typography>
-            </div>
+    return () => window.clearInterval(interval);
+  }, []);
 
-            <div className={`flex-1 transition-all duration-500 transform ${fade ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
-                <div className="flex items-center gap-2 font-medium">
-                    <WarningAmberIcon className="text-amber-400 text-sm" />
-                    <p className="text-xs text-slate-300 italic">
-                        {INSIGHTS[index]}
-                    </p>
-                </div>
-            </div>
-
-            <div className="flex gap-1">
-                {[...Array(3)].map((_, i) => (
-                    <div key={i} className="h-1 w-1 rounded-full bg-blue-500 animate-pulse" style={{ animationDelay: `${i * 0.2}s` }} />
-                ))}
-            </div>
-        </div>
-    );
+  return (
+    <div className="soft-panel flex items-center gap-3 overflow-hidden">
+      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary">
+        <BellDot className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
+          Portfolio note
+        </p>
+        <p
+          className={`mt-1 text-sm leading-6 text-foreground transition-all duration-200 ${
+            visible ? 'translate-y-0 opacity-100' : 'translate-y-1 opacity-0'
+          }`}
+        >
+          {INSIGHTS[index]}
+        </p>
+      </div>
+      <div className="flex items-center text-muted-foreground">
+        {INSIGHTS.map((_, itemIndex) => (
+          <Dot
+            key={itemIndex}
+            className={`h-5 w-5 ${itemIndex === index ? 'text-primary' : 'text-muted-foreground/40'}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
 };
 
 export default RiskTicker;

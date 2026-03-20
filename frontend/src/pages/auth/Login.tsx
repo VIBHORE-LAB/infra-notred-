@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Typography } from '@mui/material';
-import TextInput from '../../components/TextInput';
-import Button from '../../components/Button';
 import { useLogin } from '../../hooks/useLogin';
 import { useAuth } from '../../context/AuthContext';
 import AuthLayout from '../../components/layout/AuthLayout';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
+import { ArrowRight, LockKeyhole, Mail } from 'lucide-react';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -22,13 +24,16 @@ const Login: React.FC = () => {
 
   const handleSubmit = async () => {
     if (!email || !password) {
-      alert('Please fill in both email and password');
+      toast.error('Enter both email and password.');
       return;
     }
 
     const success = await login(email, password);
     if (success) {
+      toast.success('Signed in successfully.');
       navigate('/dashboard');
+    } else {
+      toast.error('Unable to sign in with those credentials.');
     }
   };
 
@@ -39,36 +44,52 @@ const Login: React.FC = () => {
       footer={(
         <>
           No account yet?{' '}
-          <button className="font-semibold text-[#0f5fa8] hover:underline" onClick={() => navigate('/register')}>
+          <button className="font-semibold text-primary hover:underline" onClick={() => navigate('/register')}>
             Create one
           </button>
         </>
       )}
     >
-      <div className="space-y-4 gap-2 flex flex-col">
-        <TextInput
-          label="Work Email"
-          name="email"
-          value={email}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-          
-        />
-        <TextInput
-          label="Password"
-          name="password"
-          type="password"
-          value={password}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-        />
+      <div className="space-y-5">
+        <div className="space-y-2">
+          <Label htmlFor="email">Work email</Label>
+          <div className="relative">
+            <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@company.com"
+              className="h-11 rounded-xl pl-10"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="password">Password</Label>
+          <div className="relative">
+            <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              className="h-11 rounded-xl pl-10"
+            />
+          </div>
+        </div>
 
         {error && (
-          <Typography color="error" variant="body2" className="rounded-lg border border-red-200 bg-red-50 p-2 text-center">
+          <div className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {error}
-          </Typography>
+          </div>
         )}
 
-        <Button onClick={handleSubmit} variantType="primary" disabled={loading} fullWidth>
-          {loading ? 'Signing in...' : 'Sign In'}
+        <Button onClick={handleSubmit} disabled={loading} className="h-11 w-full rounded-xl">
+          {loading ? 'Signing in...' : 'Sign in'}
+          <ArrowRight className="h-4 w-4" />
         </Button>
       </div>
     </AuthLayout>

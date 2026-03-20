@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Typography } from '@mui/material';
-import TextInput from '../../components/TextInput';
-import Button from '../../components/Button';
 import { useRegister } from '../../hooks/useRegister';
 import { useNavigate } from 'react-router-dom';
 import AuthLayout from '../../components/layout/AuthLayout';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
+import { ArrowRight, KeyRound, Mail, UserRound } from 'lucide-react';
 
 interface RegisterFormData {
   firstName: string;
@@ -32,7 +34,7 @@ const Register: React.FC = () => {
 
   const handleSubmit = async () => {
     if (formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match');
+      toast.error('Passwords do not match.');
       return;
     }
 
@@ -45,8 +47,10 @@ const Register: React.FC = () => {
 
     const response = await register(payload);
     if (response) {
-      alert('Registration successful! Please sign in.');
+      toast.success('Account created. You can sign in now.');
       navigate('/login');
+    } else {
+      toast.error('Unable to create the account.');
     }
   };
 
@@ -57,59 +61,97 @@ const Register: React.FC = () => {
       footer={(
         <>
           Already have an account?{' '}
-          <button className="font-semibold text-[#0f5fa8] hover:underline" onClick={() => navigate('/login')}>
+          <button className="font-semibold text-primary hover:underline" onClick={() => navigate('/login')}>
             Sign in
           </button>
         </>
       )}
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <TextInput
-          label="First Name"
-          name="firstName"
-          value={formData.firstName}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(e.target.name, e.target.value)}
-        />
-        <TextInput
-          label="Last Name"
-          name="lastName"
-          value={formData.lastName}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(e.target.name, e.target.value)}
-        />
-      </div>
+      <div className="space-y-5">
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="firstName">First name</Label>
+            <div className="relative">
+              <UserRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="firstName"
+                name="firstName"
+                value={formData.firstName}
+                onChange={(e) => handleChange(e.target.name, e.target.value)}
+                className="h-11 rounded-xl pl-10"
+              />
+            </div>
+          </div>
 
-      <div className="space-y-4 mt-4">
-        <TextInput
-          label="Work Email"
-          name="email"
-          value={formData.email}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(e.target.name, e.target.value)}
-        />
-        <TextInput
-          label="Password"
-          name="password"
-          type="password"
-          value={formData.password}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(e.target.name, e.target.value)}
-        />
-        <TextInput
-          label="Confirm Password"
-          name="confirmPassword"
-          type="password"
-          value={formData.confirmPassword}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(e.target.name, e.target.value)}
-        />
-      </div>
+          <div className="space-y-2">
+            <Label htmlFor="lastName">Last name</Label>
+            <div className="relative">
+              <UserRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="lastName"
+                name="lastName"
+                value={formData.lastName}
+                onChange={(e) => handleChange(e.target.name, e.target.value)}
+                className="h-11 rounded-xl pl-10"
+              />
+            </div>
+          </div>
+        </div>
 
-      {error && (
-        <Typography color="error" variant="body2" className="mt-4 rounded-lg border border-red-200 bg-red-50 p-2 text-center">
-          {error}
-        </Typography>
-      )}
+        <div className="space-y-2">
+          <Label htmlFor="email">Work email</Label>
+          <div className="relative">
+            <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => handleChange(e.target.name, e.target.value)}
+              className="h-11 rounded-xl pl-10"
+            />
+          </div>
+        </div>
 
-      <div className="mt-5">
-        <Button onClick={handleSubmit} variantType="primary" disabled={loading} fullWidth>
-          {loading ? 'Creating account...' : 'Create Account'}
+        <div className="space-y-2">
+          <Label htmlFor="password">Password</Label>
+          <div className="relative">
+            <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              value={formData.password}
+              onChange={(e) => handleChange(e.target.name, e.target.value)}
+              className="h-11 rounded-xl pl-10"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="confirmPassword">Confirm password</Label>
+          <div className="relative">
+            <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              id="confirmPassword"
+              name="confirmPassword"
+              type="password"
+              value={formData.confirmPassword}
+              onChange={(e) => handleChange(e.target.name, e.target.value)}
+              className="h-11 rounded-xl pl-10"
+            />
+          </div>
+        </div>
+
+        {error && (
+          <div className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            {error}
+          </div>
+        )}
+
+        <Button onClick={handleSubmit} disabled={loading} className="h-11 w-full rounded-xl">
+          {loading ? 'Creating account...' : 'Create account'}
+          <ArrowRight className="h-4 w-4" />
         </Button>
       </div>
     </AuthLayout>

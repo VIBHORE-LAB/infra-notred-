@@ -29,3 +29,11 @@ server/app/models/__pycache__/
 server/venv/bin/pip3
 venv/
 frontend/src/.env
+server/.venv/
+MAJOR_TOOLS_LIBRARIES.md
+.gitignore
+MAJOR_TOOLS_LIBRARIES.txt
+.gitignore
+MAJOR_TOOLS_LIBRARIES.pdf
+.gitignore
+DOCUMENTATION.pdf

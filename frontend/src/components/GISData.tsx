@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import 'ol/ol.css';
 import Map from 'ol/Map';
 import View from 'ol/View';
@@ -10,238 +10,294 @@ import { fromLonLat } from 'ol/proj';
 import VectorSource from 'ol/source/Vector';
 import VectorLayer from 'ol/layer/Vector';
 import { Style, Circle as CircleStyle, Fill, Stroke, Text } from 'ol/style';
+import { useTheme } from 'next-themes';
 import instance from '../api/api';
-
-import Overlay from 'ol/Overlay';
+import { riskToneClass } from '@/lib/presentation';
 
 interface ReportMarker {
-    id: string;
-    latitude: number;
-    longitude: number;
-    description: string;
-    projectName?: string;
-    projectDescription?: string;
-    images?: string[];
+  id: string;
+  latitude: number;
+  longitude: number;
+  description: string;
+  projectName?: string;
+  projectDescription?: string;
+  images?: string[];
+  riskLevel?: 'Low' | 'Medium' | 'High';
+  insight?: string;
+  confidenceScore?: number;
 }
 
 interface StaticMarker {
-    id: string;
-    name: string;
-    latitude: number;
-    longitude: number;
-    description?: string;
-    projectName?: string;
-    projectDescription?: string;
-    images?: string[];
-    riskLevel?: 'Low' | 'Medium' | 'High';
-    aiReasoning?: string;
-    confidenceScore?: number;
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  description?: string;
+  projectName?: string;
+  projectDescription?: string;
+  images?: string[];
+  riskLevel?: 'Low' | 'Medium' | 'High';
+  insight?: string;
+  confidenceScore?: number;
 }
 
 interface GISDataProps {
-    projectId?: string;
-    staticMarkers?: StaticMarker[];
+  projectId?: string;
+  staticMarkers?: StaticMarker[];
 }
 
+const DEFAULT_CENTER: [number, number] = [77.209, 28.6139];
+
+const readThemeColor = (variableName: string, alpha?: number) => {
+  if (typeof window === 'undefined') return alpha === undefined ? 'currentColor' : 'transparent';
+  const value = getComputedStyle(document.documentElement).getPropertyValue(variableName).trim();
+  if (!value) return alpha === undefined ? 'currentColor' : 'transparent';
+  return alpha === undefined ? `hsl(${value})` : `hsl(${value} / ${alpha})`;
+};
+
 const GISData: React.FC<GISDataProps> = ({ projectId, staticMarkers }) => {
-    const mapElement = useRef<HTMLDivElement>(null);
-    const popupElement = useRef<HTMLDivElement>(null);
-    const [markers, setMarkers] = useState<ReportMarker[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [hoveredData, setHoveredData] = useState<ReportMarker | null>(null);
+  const { resolvedTheme } = useTheme();
+  const mapElement = useRef<HTMLDivElement>(null);
+  const [markers, setMarkers] = useState<ReportMarker[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [hoveredData, setHoveredData] = useState<ReportMarker | null>(null);
+  const [popupPosition, setPopupPosition] = useState<{ x: number; y: number } | null>(null);
 
-    useEffect(() => {
-        const shouldFetchReports = Boolean(projectId) || (staticMarkers ?? []).length === 0;
-        if (!shouldFetchReports) {
-            setMarkers([]);
-            setLoading(false);
-            return;
-        }
+  useEffect(() => {
+    const shouldFetchReports = Boolean(projectId) || (staticMarkers ?? []).length === 0;
+    if (!shouldFetchReports) {
+      setMarkers([]);
+      setLoading(false);
+      return;
+    }
 
-        const url = projectId ? `/progress-reports/project/${projectId}` : `/progress-reports/all`;
-        setLoading(true);
-        instance.get(url)
-            .then(res => {
-                const reports = res.data?.data?.reports ?? [];
-                const mapped: ReportMarker[] = reports
-                    .filter((r: any) => r.gpsCoordinates?.latitude && r.gpsCoordinates?.longitude)
-                    .map((r: any) => ({
-                        id: r._id,
-                        latitude: r.gpsCoordinates.latitude,
-                        longitude: r.gpsCoordinates.longitude,
-                        description: r.description,
-                        projectName: r.projectName,
-                        projectDescription: r.projectDescription,
-                        images: r.images
-                    }));
-                setMarkers(mapped);
-            })
-            .catch(() => { })
-            .finally(() => setLoading(false));
-    }, [projectId, staticMarkers]);
+    const url = projectId ? `/progress-reports/project/${projectId}` : '/progress-reports/all';
+    setLoading(true);
+    instance
+      .get(url)
+      .then((response) => {
+        const reports = response.data?.data?.reports ?? [];
+        const mapped: ReportMarker[] = reports
+          .filter((report: any) => report.gpsCoordinates?.latitude && report.gpsCoordinates?.longitude)
+          .map((report: any) => ({
+            id: report._id,
+            latitude: report.gpsCoordinates.latitude,
+            longitude: report.gpsCoordinates.longitude,
+            description: report.description,
+            projectName: report.projectName,
+            projectDescription: report.projectDescription,
+            images: report.images,
+          }));
+        setMarkers(mapped);
+      })
+      .catch(() => {
+        setMarkers([]);
+      })
+      .finally(() => setLoading(false));
+  }, [projectId, staticMarkers]);
 
-    useEffect(() => {
-        if (!mapElement.current || !popupElement.current) return;
+  const allMarkers = useMemo<ReportMarker[]>(() => {
+    const shouldUseStaticMarkers = (staticMarkers ?? []).length > 0 && !projectId;
+    if (shouldUseStaticMarkers) {
+      return (staticMarkers ?? []).map((marker) => ({
+        id: marker.id,
+        latitude: marker.latitude,
+        longitude: marker.longitude,
+        description: marker.description ?? marker.name,
+        projectName: marker.projectName ?? marker.name,
+        projectDescription: marker.projectDescription ?? marker.description,
+        images: marker.images,
+        riskLevel: marker.riskLevel,
+        insight: marker.insight,
+        confidenceScore: marker.confidenceScore,
+      }));
+    }
 
-        const useStaticMarkers = (staticMarkers ?? []).length > 0 && !projectId;
-        const allMarkers: ReportMarker[] = useStaticMarkers
-            ? (staticMarkers ?? []).map(m => ({
-                id: m.id,
-                latitude: m.latitude,
-                longitude: m.longitude,
-                description: m.description ?? m.name,
-                projectName: m.projectName ?? m.name,
-                projectDescription: m.projectDescription ?? m.description,
-                images: m.images,
-            }))
-            : markers.length > 0
-                ? markers
-                : [];
+    return markers;
+  }, [markers, projectId, staticMarkers]);
 
-        const features = allMarkers.map(marker => {
-            const f = new Feature({
-                geometry: new Point(fromLonLat([marker.longitude, marker.latitude])),
-                name: marker.description,
-                data: marker
-            });
-            return f;
+  useEffect(() => {
+    if (!mapElement.current) return;
+
+    const primaryColor = readThemeColor('--primary');
+    const warningColor = readThemeColor('--status-warning');
+    const successColor = readThemeColor('--status-success');
+    const dangerColor = readThemeColor('--status-danger');
+    const foregroundColor = readThemeColor('--foreground');
+    const backgroundColor = readThemeColor('--background', 0.92);
+
+    const features = allMarkers.map((marker) => {
+      return new Feature({
+        geometry: new Point(fromLonLat([marker.longitude, marker.latitude])),
+        data: marker,
+        name: marker.projectName || marker.description,
+      });
+    });
+
+    const vectorSource = new VectorSource({ features });
+    const vectorLayer = new VectorLayer({
+      source: vectorSource,
+      style: (feature) => {
+        const data = feature.get('data') as ReportMarker;
+        const risk = (data.riskLevel ?? '').toLowerCase();
+
+        let markerColor = primaryColor;
+        if (risk === 'high') markerColor = dangerColor;
+        if (risk === 'medium') markerColor = warningColor;
+        if (risk === 'low') markerColor = successColor;
+
+        const label = (feature.get('name') ?? '').toString();
+        const shortLabel = label.length > 18 ? `${label.slice(0, 18)}...` : label;
+
+        return new Style({
+          image: new CircleStyle({
+            radius: data.riskLevel ? 10 : 8,
+            fill: new Fill({ color: markerColor }),
+            stroke: new Stroke({ color: backgroundColor, width: 2 }),
+          }),
+          text: new Text({
+            text: shortLabel,
+            offsetY: -20,
+            fill: new Fill({ color: foregroundColor }),
+            backgroundFill: new Fill({ color: backgroundColor }),
+            padding: [3, 6, 3, 6],
+            font: '600 11px Manrope, sans-serif',
+          }),
         });
+      },
+    });
 
-        const vectorSource = new VectorSource({ features });
-        const vectorLayer = new VectorLayer({
-            source: vectorSource,
-            style: (feature) => {
-                const data = feature.get('data') as ReportMarker;
-                const risk = (data as any).riskLevel as string | undefined;
+    const map = new Map({
+      target: mapElement.current,
+      layers: [new TileLayer({ source: new OSM() }), vectorLayer],
+      view: new View({
+        center:
+          allMarkers.length > 0
+            ? fromLonLat([allMarkers[0].longitude, allMarkers[0].latitude])
+            : fromLonLat(DEFAULT_CENTER),
+        zoom: allMarkers.length > 0 ? 10 : 4,
+      }),
+    });
 
-                let markerColor = '#4f46e5'; // Default Indigo
-                if (risk === 'High') markerColor = '#e11d48'; // Rose-600
-                if (risk === 'Medium') markerColor = '#f59e0b'; // Amber-500
+    map.on('pointermove', (event) => {
+      const feature = map.forEachFeatureAtPixel(event.pixel, (item) => item);
+      if (!feature) {
+        setHoveredData(null);
+        setPopupPosition(null);
+        map.getTargetElement().style.cursor = '';
+        return;
+      }
 
-                return new Style({
-                    image: new CircleStyle({
-                        radius: risk ? 10 : 8,
-                        fill: new Fill({ color: markerColor }),
-                        stroke: new Stroke({ color: 'white', width: 2 }),
-                    }),
-                    text: new Text({
-                        text: (() => {
-                            const full = (feature.get('name') ?? '').toString();
-                            return full.length > 15 ? `${full.substring(0, 15)}...` : full;
-                        })(),
-                        offsetY: -18,
-                        fill: new Fill({ color: '#1e293b' }),
-                        backgroundFill: new Fill({ color: 'rgba(255,255,255,0.8)' }),
-                        padding: [2, 4, 2, 4],
-                        font: 'bold 10px Inter, sans-serif'
-                    }),
-                });
-            },
-        });
+      const data = feature.get('data') as ReportMarker;
+      setHoveredData(data);
+      setPopupPosition({ x: event.pixel[0], y: event.pixel[1] });
+      map.getTargetElement().style.cursor = 'pointer';
+    });
 
-        const overlay = new Overlay({
-            element: popupElement.current,
-            autoPan: {
-                animation: {
-                    duration: 250,
-                },
-            },
-            offset: [0, -10],
-            positioning: 'bottom-center'
-        });
+    const handleMouseLeave = () => {
+      setHoveredData(null);
+      setPopupPosition(null);
+      map.getTargetElement().style.cursor = '';
+    };
 
-        const map = new Map({
-            target: mapElement.current,
-            layers: [new TileLayer({ source: new OSM() }), vectorLayer],
-            overlays: [overlay],
-            view: new View({
-                center: allMarkers.length > 0
-                    ? fromLonLat([allMarkers[0].longitude, allMarkers[0].latitude])
-                    : fromLonLat([77.2090, 28.6139]),
-                zoom: allMarkers.length > 0 ? 10 : 4,
-            }),
-        });
+    map.getViewport().addEventListener('mouseleave', handleMouseLeave);
 
-        map.on('pointermove', (evt) => {
-            const feature = map.forEachFeatureAtPixel(evt.pixel, (feat) => feat);
-            if (feature) {
-                const data = feature.get('data') as ReportMarker;
-                setHoveredData(data);
-                const coordinate = (feature.getGeometry() as Point).getCoordinates();
-                overlay.setPosition(coordinate);
-                map.getTargetElement().style.cursor = 'pointer';
-            } else {
-                setHoveredData(null);
-                overlay.setPosition(undefined);
-                map.getTargetElement().style.cursor = '';
-            }
-        });
+    return () => {
+      map.getViewport().removeEventListener('mouseleave', handleMouseLeave);
+      map.setTarget(undefined);
+    };
+  }, [allMarkers, resolvedTheme]);
 
-        return () => { map.setTarget(undefined); };
-    }, [markers, staticMarkers, projectId]);
+  return (
+    <div className="relative h-full w-full overflow-hidden rounded-[inherit] bg-muted/30">
+      {loading && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/75 backdrop-blur-sm">
+          <div className="h-9 w-9 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
+        </div>
+      )}
 
-    return (
-        <div className="w-full rounded-2xl overflow-hidden border border-slate-200 shadow-xl relative bg-slate-50">
-            {loading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-20">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                </div>
-            )}
+      <div className="pointer-events-none absolute left-4 top-4 z-10 flex items-center gap-2 rounded-full border border-border/80 bg-card/90 px-3 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur-sm">
+        <span className="font-medium text-foreground">{allMarkers.length}</span>
+        mapped locations
+      </div>
 
-            <div ref={mapElement} className="w-full h-[500px]" />
+      <div className="pointer-events-none absolute bottom-4 left-4 z-10 flex flex-wrap gap-2">
+        {(['Low', 'Medium', 'High'] as const).map((level) => (
+          <span
+            key={level}
+            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] backdrop-blur-sm ${riskToneClass(level)}`}
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-current" />
+            {level}
+          </span>
+        ))}
+      </div>
 
-            <div ref={popupElement} className={`absolute z-50 pointer-events-none transition-opacity duration-200 ${hoveredData ? 'opacity-100' : 'opacity-0'}`}>
-                {hoveredData && (
-                    <div className="bg-white rounded-xl shadow-2xl border border-slate-100 p-0 w-80 overflow-hidden pointer-events-auto">
-                        <div className="flex">
-                            <div className="p-3 flex-1 min-w-0">
-                                <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider mb-1">
-                                    {hoveredData.projectName || 'Project'}
-                                </p>
-                                <h3 className="text-sm font-bold text-slate-800 line-clamp-1">{hoveredData.description}</h3>
-                                <p className="text-[11px] text-slate-500 mt-1 line-clamp-3">
-                                    {(hoveredData as any).aiReasoning || hoveredData.projectDescription || 'No additional project details available.'}
-                                </p>
-                                {(hoveredData as any).riskLevel && (
-                                    <div className="mt-2 flex items-center gap-2">
-                                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${(hoveredData as any).riskLevel === 'High' ? 'bg-rose-100 text-rose-700' : (hoveredData as any).riskLevel === 'Medium' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                                            {(hoveredData as any).riskLevel} Risk
-                                        </span>
-                                        {(hoveredData as any).confidenceScore !== undefined && (
-                                            <span className="text-[9px] text-slate-400 font-medium italic">
-                                                Conf: {((hoveredData as any).confidenceScore * 100).toFixed(0)}%
-                                            </span>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                            <div className="w-28 h-28 shrink-0 bg-slate-100 border-l border-slate-100">
-                                {hoveredData.images && hoveredData.images[0] ? (
-                                    <img src={hoveredData.images[0]} alt="Project" className="w-full h-full object-cover" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400 font-medium px-2 text-center">
-                                        No image
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        <div className="bg-slate-50 px-3 py-2 border-t border-slate-100 flex justify-between items-center">
-                            <span className="text-[10px] font-medium text-slate-500">
-                                Lat {hoveredData.latitude.toFixed(4)}, Lng {hoveredData.longitude.toFixed(4)}
-                            </span>
-                            <span className="text-[10px] font-semibold text-indigo-600">AI Verified Pin</span>
-                        </div>
-                    </div>
+      <div ref={mapElement} className="h-full min-h-[320px] w-full" />
+
+      {hoveredData && popupPosition && (
+        <div
+          className="pointer-events-none absolute z-30 w-80 max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-[calc(100%+1rem)]"
+          style={{ left: popupPosition.x, top: popupPosition.y }}
+        >
+          <div className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-2xl">
+            <div className="flex">
+              <div className="min-w-0 flex-1 p-4">
+                <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                  {hoveredData.projectName || 'Project'}
+                </p>
+                <h3 className="mt-1 line-clamp-1 text-sm font-semibold text-foreground">
+                  {hoveredData.description}
+                </h3>
+                <p className="mt-2 line-clamp-3 text-xs leading-5 text-muted-foreground">
+                  {hoveredData.insight || hoveredData.projectDescription || 'No additional context is available for this location yet.'}
+                </p>
+                {hoveredData.riskLevel && (
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <span className={`rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] ${riskToneClass(hoveredData.riskLevel)}`}>
+                      {hoveredData.riskLevel} risk
+                    </span>
+                    {hoveredData.confidenceScore !== undefined && (
+                      <span className="text-[11px] text-muted-foreground">
+                        {Math.round(hoveredData.confidenceScore * 100)}% confidence
+                      </span>
+                    )}
+                  </div>
                 )}
+              </div>
+
+              <div className="h-28 w-28 shrink-0 border-l border-border/70 bg-muted/30">
+                {hoveredData.images?.[0] ? (
+                  <img
+                    src={hoveredData.images[0]}
+                    alt={hoveredData.projectName || 'Location preview'}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center px-3 text-center text-[11px] text-muted-foreground">
+                    No image
+                  </div>
+                )}
+              </div>
             </div>
 
-            {markers.length === 0 && (staticMarkers ?? []).length === 0 && !loading && (
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur shadow-sm text-slate-600 text-xs px-4 py-2 rounded-full border border-slate-200 font-medium z-10">
-                    No project coordinates available yet
-                </div>
-            )}
+            <div className="flex items-center justify-between border-t border-border/70 bg-muted/20 px-4 py-2 text-[11px] text-muted-foreground">
+              <span>
+                Lat {hoveredData.latitude.toFixed(4)}, Lng {hoveredData.longitude.toFixed(4)}
+              </span>
+              <span className="font-medium text-foreground">Mapped update</span>
+            </div>
+          </div>
         </div>
-    );
+      )}
+
+      {allMarkers.length === 0 && !loading && (
+        <div className="absolute bottom-4 left-1/2 z-10 -translate-x-1/2 rounded-full border border-border/80 bg-card/90 px-4 py-2 text-xs text-muted-foreground shadow-sm backdrop-blur-sm">
+          No project coordinates are available yet.
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default GISData;

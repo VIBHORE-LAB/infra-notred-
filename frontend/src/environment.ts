@@ -1,8 +1,10 @@
-type EnvName = "local";
+type EnvName = "local" | "production";
 type Environment = { name: EnvName; apiUrl: string };
 
 function getEnvironment(): Environment {
-  return { name: "local", apiUrl: "http://127.0.0.1:5001/infrared/api/v1" };
+  const apiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:8000/infrared/api/v1";
+  const name: EnvName = import.meta.env.PROD ? "production" : "local";
+  return { name, apiUrl };
 }
 
 const environment = getEnvironment();
